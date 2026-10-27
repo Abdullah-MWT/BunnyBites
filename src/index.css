@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+:root {
+  --sky: #8DBCE8;
+  --periwinkle: #648BC3;
+  --electric: #0189FE;
+  --deep: #1E3A5F;
+  --cream: #FBF9F5;
+  --butter: #F7F3EB;
+  --glow: #D97706;
+  --ink: #111827;
+  --ink-muted: #6B7280;
+  --bg-page: #FAF8F5;
+  --card-bg: #FFFFFF;
+  --border-soft: rgba(229, 231, 235, 0.9);
+}
+
+.night-theme {
+  --bg-page: #0C121D;
+  --ink: #F9FAFB;
+  --ink-muted: #9CA3AF;
+  --card-bg: #131B2A;
+  --border-soft: rgba(55, 65, 81, 0.7);
+  --deep: #8DBCE8;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-page);
+  color: var(--ink);
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+  letter-spacing: -0.011em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Boutique Typography Classes */
+.font-serif {
+  font-family: 'Playfair Display', Georgia, serif;
+  letter-spacing: -0.02em;
+}
+
+.font-display {
+  font-family: 'Playfair Display', Georgia, serif;
+  letter-spacing: -0.025em;
+}
+
+.font-sans-clean {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+.font-bubbly {
+  /* Transitioned to refined boutique display serif */
+  font-family: 'Playfair Display', Georgia, serif;
+  letter-spacing: -0.02em;
+}
+
+.font-caps {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+/* Hide scrollbar for clean horizontal single-line scroll */
+.scrollbar-none::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none,
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Refined Boutique Card System */
+.boutique-card,
+.clay-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-soft);
+  border-radius: 1.25rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03), 0 6px 20px -4px rgba(15, 23, 42, 0.04);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.boutique-card:hover,
+.clay-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 12px 28px -4px rgba(15, 23, 42, 0.08);
+}
+
+/* Subtle architectural panel without heavy stripes */
+.fluted-panel {
+  background: transparent;
+}
+
+/* Custom Minimalist Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.4);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 114, 128, 0.7);
+}

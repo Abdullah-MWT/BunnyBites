@@ -74,6 +74,7 @@ export interface CustomerReview {
   comment: string;
   isSample?: boolean;
   approved: boolean;
+  verifiedGuest?: boolean;
 }
 
 export interface PromoCode {
@@ -93,6 +94,7 @@ export interface AppConfig {
   fullAddress: string;
   phone: string;
   whatsapp: string; // 923001234567
+  whatsappOrders?: string;
   openingHoursDisplay: string;
   openHour: number; // e.g. 12 (12 PM)
   closeHour: number; // e.g. 3 (3 AM next day)
@@ -112,6 +114,7 @@ export interface AppConfig {
     facebook: string;
     instagram: string;
   };
+  ownerName?: string;
   ownerStory: string;
   currency: string;
   acceptingOrders: boolean;

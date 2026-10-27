@@ -368,7 +368,7 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                   <button
                     type="button"
                     onClick={() => openCustomizeModal(item)}
-                    className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-900 dark:text-white hover:bg-stone-100 dark:hover:bg-slate-800 border border-stone-200 dark:border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="min-h-[44px] px-4 py-2 rounded-xl text-xs font-semibold text-slate-900 dark:text-white hover:bg-stone-100 dark:hover:bg-slate-800 border border-stone-200 dark:border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5 text-[#0189FE]" />
                     <span>{item.sizes ? 'Select' : 'Add'}</span>
@@ -506,11 +506,12 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                     soundEffects.playPop();
                     setModalQuantity(Math.max(1, modalQuantity - 1));
                   }}
-                  className="w-7 h-7 rounded-lg border border-stone-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center cursor-pointer"
+                  aria-label="Decrease quantity"
+                  className="min-h-[44px] min-w-[44px] rounded-xl border border-stone-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center cursor-pointer hover:bg-stone-100 dark:hover:bg-slate-800 transition-colors"
                 >
                   -
                 </button>
-                <span className="font-mono tabular-nums text-sm font-bold text-slate-900 dark:text-white">
+                <span className="font-mono tabular-nums text-base font-bold text-slate-900 dark:text-white px-2">
                   {modalQuantity}
                 </span>
                 <button
@@ -519,7 +520,8 @@ export const MenuSection: React.FC<MenuSectionProps> = ({
                     soundEffects.playPop();
                     setModalQuantity(modalQuantity + 1);
                   }}
-                  className="w-7 h-7 rounded-lg border border-stone-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center cursor-pointer"
+                  aria-label="Increase quantity"
+                  className="min-h-[44px] min-w-[44px] rounded-xl border border-stone-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center cursor-pointer hover:bg-stone-100 dark:hover:bg-slate-800 transition-colors"
                 >
                   +
                 </button>

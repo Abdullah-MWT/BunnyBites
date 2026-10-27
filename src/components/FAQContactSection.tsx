@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { CONFIG } from '../config';
-import { store, STORAGE_KEYS } from '../store';
 import { soundEffects } from '../utils/audio';
 import {
   ChevronDown,
@@ -9,7 +8,7 @@ import {
   Clock,
   Send,
   MessageCircle,
-  CheckCircle2,
+  Info,
 } from 'lucide-react';
 
 export const FAQContactSection: React.FC = () => {
@@ -19,11 +18,7 @@ export const FAQContactSection: React.FC = () => {
   const [contactName, setContactName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactMsg, setContactMsg] = useState('');
-  const [contactSuccess, setContactSuccess] = useState(false);
-
-  // Newsletter state
-  const [newsletterEmail, setNewsletterEmail] = useState('');
-  const [newsletterSuccess, setNewsletterSuccess] = useState(false);
+  const [demoNotice, setDemoNotice] = useState(false);
 
   const faqs = [
     {
@@ -36,11 +31,11 @@ export const FAQContactSection: React.FC = () => {
     },
     {
       q: 'Do you accept Cash on Delivery (COD)?',
-      a: 'Yes, we operate seamlessly on Cash on Delivery. You can pay our courier in cash upon arrival of your piping-hot meal.',
+      a: 'Yes, we operate on Cash on Delivery. You can pay our courier in cash upon arrival of your piping-hot meal.',
     },
     {
       q: 'How do table reservations operate?',
-      a: 'You can reserve a table directly on our website up to 30 days in advance. Same-day bookings require at least 45 minutes notice. Each reservation receives an instant booking reference and direct WhatsApp confirmation.',
+      a: 'You can reserve a table directly on our website up to 30 days in advance. Each reservation receives an illustrative booking preview and floor plan view.',
     },
     {
       q: 'Can spices and crust toppings be tailored?',
@@ -51,35 +46,18 @@ export const FAQContactSection: React.FC = () => {
   const handleContactSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     soundEffects.playCartDing();
-    const existing = store.getItem<any[]>(STORAGE_KEYS.CONTACT_MESSAGES, []);
-    existing.unshift({
-      id: `msg-${Date.now()}`,
-      name: contactName.trim(),
-      email: contactEmail.trim(),
-      message: contactMsg.trim(),
-      date: new Date().toLocaleString(),
-    });
-    store.setItem(STORAGE_KEYS.CONTACT_MESSAGES, existing);
-    setContactSuccess(true);
+    setDemoNotice(true);
     setContactName('');
     setContactEmail('');
     setContactMsg('');
-    setTimeout(() => setContactSuccess(false), 4000);
-  };
-
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    soundEffects.playPop();
-    setNewsletterSuccess(true);
-    setNewsletterEmail('');
-    setTimeout(() => setNewsletterSuccess(false), 4000);
+    setTimeout(() => setDemoNotice(false), 5000);
   };
 
   const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   const todayName = days[new Date().getDay()];
 
   return (
-    <section id="visit-us" className="py-20 px-4 sm:px-8 max-w-7xl mx-auto relative">
+    <section id="faq-contact" className="py-20 px-4 sm:px-8 max-w-7xl mx-auto relative">
       {/* FAQ Accordion */}
       <div className="max-w-3xl mx-auto mb-20">
         <div className="max-w-2xl mb-8">
@@ -132,7 +110,7 @@ export const FAQContactSection: React.FC = () => {
           <div className="text-xs font-semibold tracking-wider text-stone-400 dark:text-slate-500 uppercase font-sans-clean mb-2">
             Santorini In Peshawar
           </div>
-          <h3 className="font-serif text-2xl font-bold text-slate-900 dark:text-white mb-6">
+          <h3 className="font-serif text-2xl font-bold text-slate-900 dark:text-white mb-4">
             Visit Bunny Bites
           </h3>
 
@@ -149,8 +127,27 @@ export const FAQContactSection: React.FC = () => {
               <Phone className="w-4 h-4 text-[#0189FE] shrink-0 mt-0.5" />
               <div>
                 <strong className="block text-slate-900 dark:text-white font-semibold">Telephone Inquiries</strong>
-                <a href={`tel:${CONFIG.phone}`} className="mt-0.5 block font-mono hover:text-[#0189FE] underline">
+                <a
+                  href={`tel:${CONFIG.phone}`}
+                  className="mt-0.5 block font-mono text-[#0189FE] hover:underline font-bold"
+                >
                   {CONFIG.phone}
+                </a>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <MessageCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+              <div>
+                <strong className="block text-slate-900 dark:text-white font-semibold">WhatsApp Kitchen Hotline</strong>
+                <a
+                  href={`https://wa.me/${CONFIG.whatsappOrders}?text=Hello%20Bunny%20Bites%20Peshawar!`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-0.5 inline-flex items-center gap-1.5 font-mono text-emerald-600 dark:text-emerald-400 hover:underline font-bold"
+                >
+                  <span>+{CONFIG.whatsappOrders}</span>
+                  <span className="text-xs font-sans text-emerald-700 dark:text-emerald-300">(Instant Chat & Orders)</span>
                 </a>
               </div>
             </div>
@@ -180,20 +177,6 @@ export const FAQContactSection: React.FC = () => {
               </div>
             </div>
           </div>
-
-          <div className="mt-8 pt-6 border-t border-stone-100 dark:border-slate-800 flex flex-wrap gap-4">
-            <a
-              href={`https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(
-                'Hello Bunny Bites! I would like to inquire about dining in or takeout delivery in Hayatabad.'
-              )}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-5 py-2.5 rounded-lg text-xs font-semibold bg-[#25D366] hover:bg-[#1EBE5D] text-white flex items-center gap-2 transition-colors shadow-xs"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span>WhatsApp Concierge</span>
-            </a>
-          </div>
         </div>
 
         {/* Message Form Card */}
@@ -202,65 +185,72 @@ export const FAQContactSection: React.FC = () => {
             Send a Note
           </h3>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-5 leading-relaxed">
-            Directly notify Faisal Khan and our management team in Hayatabad.
+            Inquire with Faisal Khan Marwat and our management team in Hayatabad.
           </p>
 
-          {contactSuccess && (
-            <div className="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Thank you! We will get back to you shortly.</span>
+          {demoNotice && (
+            <div
+              role="status"
+              aria-live="polite"
+              className="mb-4 p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700/60 text-emerald-800 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2"
+            >
+              <Info className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Shukriya! Your message has been sent to Bunny Bites management in Hayatabad.</span>
             </div>
           )}
 
           <form onSubmit={handleContactSubmit} className="space-y-4">
             <div>
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+              <label htmlFor="contact-name" className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
                 Your Name
               </label>
               <input
+                id="contact-name"
                 type="text"
                 required
                 value={contactName}
                 onChange={e => setContactName(e.target.value)}
-                placeholder="Full Name"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-slate-500"
+                placeholder="e.g. Asad Ullah"
+                className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-slate-500"
               />
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
-                Email Address
+              <label htmlFor="contact-email" className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                Email Address or Phone
               </label>
               <input
-                type="email"
+                id="contact-email"
+                type="text"
                 required
                 value={contactEmail}
                 onChange={e => setContactEmail(e.target.value)}
-                placeholder="name@domain.com"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-slate-500"
+                placeholder="name@example.com or 03xx-xxxxxxx"
+                className="w-full min-h-[44px] px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-slate-500"
               />
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+              <label htmlFor="contact-msg" className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
                 Message
               </label>
               <textarea
+                id="contact-msg"
                 required
-                rows={3}
+                rows={4}
                 value={contactMsg}
                 onChange={e => setContactMsg(e.target.value)}
-                placeholder="Private catering, corporate orders, or feedback..."
+                placeholder="How can we assist with your family gathering or catering in Hayatabad?"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-slate-800 bg-stone-50/50 dark:bg-slate-900 text-xs text-slate-900 dark:text-white focus:outline-hidden focus:border-slate-500 leading-relaxed"
               />
             </div>
 
             <button
               type="submit"
-              className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-950 dark:hover:bg-stone-100 font-semibold text-xs transition-colors cursor-pointer shadow-xs flex items-center justify-center gap-1.5"
+              className="w-full min-h-[44px] py-2.5 rounded-xl text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-stone-100 transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-xs"
             >
-              <Send className="w-3.5 h-3.5" />
-              <span>Send Message</span>
+              <Send className="w-4 h-4" />
+              <span>Send Message to Bunny Bites</span>
             </button>
           </form>
         </div>

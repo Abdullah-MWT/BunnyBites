@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --sky: #8DBCE8;
   --periwinkle: #648BC3;
@@ -8,19 +10,19 @@
   --cream: #FBF9F5;
   --butter: #F7F3EB;
   --glow: #D97706;
-  --ink: #111827;
-  --ink-muted: #6B7280;
-  --bg-page: #FAF8F5;
+  --ink: #0F172A;
+  --ink-muted: #475569;
+  --bg-page: #F8FAFC;
   --card-bg: #FFFFFF;
-  --border-soft: rgba(229, 231, 235, 0.9);
+  --border-soft: rgba(226, 232, 240, 0.9);
 }
 
-.night-theme {
+.night-theme, .dark {
   --bg-page: #0C121D;
-  --ink: #F9FAFB;
-  --ink-muted: #9CA3AF;
+  --ink: #F8FAFC;
+  --ink-muted: #94A3B8;
   --card-bg: #131B2A;
-  --border-soft: rgba(55, 65, 81, 0.7);
+  --border-soft: rgba(51, 65, 85, 0.7);
   --deep: #8DBCE8;
 }
 
@@ -29,9 +31,14 @@ body {
   background-color: var(--bg-page);
   color: var(--ink);
   overflow-x: hidden;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition: background-color 0.25s ease, color 0.25s ease;
   letter-spacing: -0.011em;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Scroll margin so sticky header never hides anchored headings */
+section, [id] {
+  scroll-margin-top: 5rem;
 }
 
 /* Boutique Typography Classes */
@@ -49,12 +56,6 @@ body {
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
-.font-bubbly {
-  /* Transitioned to refined boutique display serif */
-  font-family: 'Playfair Display', Georgia, serif;
-  letter-spacing: -0.02em;
-}
-
 .font-caps {
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   letter-spacing: 0.14em;
@@ -63,7 +64,7 @@ body {
   font-weight: 700;
 }
 
-/* Hide scrollbar for clean horizontal single-line scroll */
+/* Hide scrollbars cleanly */
 .scrollbar-none::-webkit-scrollbar,
 .no-scrollbar::-webkit-scrollbar {
   display: none;
@@ -80,19 +81,29 @@ body {
   background: var(--card-bg);
   border: 1px solid var(--border-soft);
   border-radius: 1.25rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.03), 0 6px 20px -4px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 6px 18px -4px rgba(15, 23, 42, 0.05);
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.dark .boutique-card,
+.dark .clay-card {
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.3), 0 8px 24px -4px rgba(0, 0, 0, 0.4);
 }
 
 .boutique-card:hover,
 .clay-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 12px 28px -4px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 12px 28px -4px rgba(15, 23, 42, 0.08);
 }
 
-/* Subtle architectural panel without heavy stripes */
-.fluted-panel {
-  background: transparent;
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Custom Minimalist Scrollbar */
@@ -104,9 +115,9 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.4);
+  background: rgba(148, 163, 184, 0.4);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(107, 114, 128, 0.7);
+  background: rgba(100, 116, 139, 0.7);
 }

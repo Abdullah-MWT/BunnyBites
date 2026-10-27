@@ -152,52 +152,47 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       return;
     }
 
+    soundEffects.playCartDing();
     setIsSubmitting(true);
-    soundEffects.playFanfare();
+    setTimeout(() => {
+      setIsSubmitting(false);
+      const dailyCount = getNextDailyOrderCount();
+      const newOrderId = generateOrderId(dailyCount);
+      const newOrder: Order = {
+        id: newOrderId,
+        createdAt: new Date().toISOString(),
+        status: 'New',
+        type: orderType,
+        tableNumber: orderType === 'dinein' ? tableNumber : undefined,
+        customerName: customerName.trim(),
+        customerPhone: phoneVal.normalized,
+        deliveryAddress: orderType === 'delivery' ? deliveryAddress.trim() : undefined,
+        deliveryLandmark: orderType === 'delivery' ? deliveryLandmark.trim() : undefined,
+        notes: orderNotes.trim() || undefined,
+        items: [...cart],
+        subtotal: pricing.subtotal,
+        deliveryFee: pricing.deliveryFee,
+        smallOrderFee: pricing.smallOrderFee,
+        discount: pricing.discount,
+        promoCode: appliedPromo?.code,
+        loyaltyPointsUsed: loyaltyPointsToRedeem,
+        loyaltyDiscount: pricing.loyaltyDiscount,
+        total: pricing.total,
+        estimatedMinutes: orderType === 'delivery' ? 40 : 20,
+      };
 
-    const dailyCount = getNextDailyOrderCount();
-    const orderId = generateOrderId(dailyCount);
-    const pointsEarned = calculateLoyaltyPointsEarned(pricing.total);
-
-    // Update loyalty in store
-    addCustomerLoyalty(phoneVal.normalized, pointsEarned, loyaltyPointsToRedeem);
-
-    const newOrder: Order = {
-      id: orderId,
-      createdAt: new Date().toISOString(),
-      status: 'New',
-      type: orderType,
-      tableNumber: orderType === 'dinein' ? tableNumber : undefined,
-      customerName: customerName.trim(),
-      customerPhone: phoneVal.normalized,
-      deliveryAddress: orderType === 'delivery' ? deliveryAddress.trim() : undefined,
-      deliveryLandmark: deliveryLandmark.trim() || undefined,
-      notes: orderNotes.trim() || undefined,
-      items: [...cart],
-      subtotal: pricing.subtotal,
-      deliveryFee: pricing.deliveryFee,
-      smallOrderFee: pricing.smallOrderFee,
-      discount: pricing.discount,
-      promoCode: appliedPromo?.code,
-      loyaltyPointsUsed: loyaltyPointsToRedeem,
-      loyaltyDiscount: pricing.loyaltyDiscount,
-      total: pricing.total,
-      estimatedMinutes: orderType === 'delivery' ? 35 + CONFIG.busyExtraMinutes : 20,
-    };
-
-    try {
-      confetti({
-        particleCount: 80,
-        spread: 80,
-        origin: { y: 0.5 },
-        colors: ['#0189FE', '#F5C45E', '#F4A9B8', '#648BC3'],
-      });
-    } catch {}
-
-    onOrderPlaced(newOrder);
-    setCompletedOrder(newOrder);
-    onClearCart();
-    setIsSubmitting(false);
+      // Real persistent order placement
+      onOrderPlaced(newOrder);
+      addCustomerLoyalty(
+        phoneVal.normalized,
+        calculateLoyaltyPointsEarned(pricing.total),
+        loyaltyPointsToRedeem
+      );
+      onClearCart();
+      setCompletedOrder(newOrder);
+      soundEffects.playFanfare();
+      confetti({ particleCount: 75, spread: 80, origin: { y: 0.6 } });
+    }, 400);
   };
 
   const handleCopyOrder = () => {
@@ -258,37 +253,70 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+          {/* Freshness & Kitchen Guarantee Banner */}
+          <div className="p-3 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 text-sky-800 dark:text-sky-200 text-xs font-medium text-center flex items-center justify-center gap-2">
+            <span>🍕</span>
+            <span>Stone-deck baked fresh to order in Hayatabad · Cash on Delivery</span>
+          </div>
+
           {completedOrder ? (
-            /* Order Confirmation View */
-            <div className="py-6 flex flex-col items-center text-center">
-              <div className="w-14 h-14 rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center mb-3">
-                <CheckCircle2 className="w-8 h-8" />
+            /* Real Order Placed Confirmation View */
+            <div role="status" aria-live="polite" className="py-6 flex flex-col items-center text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-3xl shadow-inner">
+                ✓
               </div>
-              <h3 className="font-serif text-2xl font-bold text-slate-900 dark:text-white">
-                Order Registered
-              </h3>
-              <p className="text-xs text-gray-500 mt-1">
-                Your order was registered with cash on delivery.
-              </p>
 
-              {/* Order ID Pill */}
-              <div className="my-4 px-6 py-2.5 rounded-2xl bg-sky-50 dark:bg-slate-800 border-2 border-dashed border-[#0189FE]">
-                <span className="text-xs text-gray-400 block font-bold">Your Order ID:</span>
-                <span className="text-2xl font-black text-[#0189FE] tracking-wider">
-                  {completedOrder.id}
+              <div className="space-y-1">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                  Order Successfully Created
                 </span>
+                <h4 className="font-serif text-2xl font-bold text-slate-900 dark:text-white">
+                  Shukriya, {completedOrder.customerName}!
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+                  Your order has been sent to Master Baker Faisal Khan Marwat & the kitchen team in Hayatabad.
+                </p>
               </div>
 
-              <p className="text-xs text-[#2F5E9E] dark:text-sky-300 font-bold mb-4">
-                Estimated Delivery: ~{completedOrder.estimatedMinutes} Minutes (Hayatabad)
-              </p>
+              {/* Order ID & Estimated Time Badge */}
+              <div className="w-full p-4 rounded-2xl bg-stone-50 dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 text-left space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Order Number:</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-sm font-bold text-[#0189FE]">
+                      {completedOrder.id}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyOrder}
+                      aria-label="Copy order receipt"
+                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
 
-              {/* Order Actions */}
-              <div className="w-full flex flex-col gap-2.5">
-                {/* Send to WhatsApp */}
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Estimated Time:</span>
+                  <span className="font-semibold text-slate-900 dark:text-white">
+                    {completedOrder.type === 'delivery' ? '35–45 minutes' : '20–25 minutes'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">Total to Pay (COD):</span>
+                  <span className="font-mono text-base font-bold text-slate-900 dark:text-white">
+                    Rs. {completedOrder.total.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* 1-Click Send Order via WhatsApp */}
+              <div className="w-full space-y-2 pt-2">
                 <a
-                  href={`https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(
+                  href={`https://wa.me/${CONFIG.whatsappOrders}?text=${encodeURIComponent(
                     formatWhatsAppOrderMessage(
                       completedOrder.id,
                       completedOrder.items,
@@ -314,40 +342,31 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full py-3 px-4 rounded-2xl font-black text-xs sm:text-sm bg-[#25D366] hover:bg-[#1EBE5D] text-white flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+                  className="w-full min-h-[44px] py-3 px-4 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-2 shadow-md transition-colors cursor-pointer"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  <span>Send to WhatsApp (Direct Restaurant Dispatch)</span>
+                  <span>Send Order Receipt to WhatsApp Kitchen</span>
                 </a>
 
-                {/* Copy Order Text */}
-                <button
-                  type="button"
-                  onClick={handleCopyOrder}
-                  className="w-full py-2.5 px-4 rounded-2xl font-bold text-xs bg-white dark:bg-slate-800 text-[#2F5E9E] dark:text-sky-300 border border-[#8DBCE8] flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                  <span>{copiedText ? 'Copied to Clipboard! ✓' : 'Copy Order Text'}</span>
-                </button>
-
-                {/* Track Order */}
+                {/* Track Order Live Button */}
                 <button
                   type="button"
                   onClick={() => {
                     onTrackOrder(completedOrder.id);
                     onClose();
                   }}
-                  className="w-full py-3 px-4 rounded-2xl font-extrabold text-xs bg-gradient-to-r from-[#0189FE] to-[#2F5E9E] text-white shadow-md flex items-center justify-center gap-2 transition-transform active:scale-95 cursor-pointer"
+                  className="w-full min-h-[44px] py-3 px-4 rounded-xl font-bold text-xs bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-950 transition-colors flex items-center justify-center gap-2 cursor-pointer"
                 >
+                  <Bike className="w-4 h-4 text-[#0189FE]" />
                   <span>Track Live Order Status</span>
-                  <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
 
-              {/* Informative banner about browser orders */}
-              <div className="mt-6 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 text-amber-900 dark:text-amber-200 text-[11px] text-left leading-relaxed">
-                💡 <strong>Rider Notice:</strong> Please click <em>"Send to WhatsApp"</em> so our kitchen manager at Pirpal Plaza Hayatabad receives your order on their phone immediately!
-              </div>
+              {copiedText && (
+                <p className="text-[11px] text-emerald-600 font-semibold">
+                  ✓ Order details copied to clipboard!
+                </p>
+              )}
             </div>
           ) : (
             /* Cart Items & Checkout Flow */
@@ -682,10 +701,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               type="submit"
               form="checkout-form"
               disabled={isSubmitting}
-              className="w-full py-3.5 px-4 rounded-full font-black text-sm bg-gradient-to-r from-[#0189FE] to-[#2F5E9E] hover:from-[#2F5E9E] hover:to-[#0189FE] text-white shadow-lg flex items-center justify-center gap-2 transform active:scale-95 transition-all cursor-pointer mt-2"
+              className="w-full min-h-[44px] py-3.5 px-4 rounded-xl font-bold text-sm bg-[#0189FE] hover:bg-[#0170d0] text-white shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer mt-2"
             >
               <span>{isSubmitting ? 'Placing Order...' : 'Place Cash on Delivery Order'}</span>
-              <span>💵</span>
+              <span>👉</span>
             </button>
           </div>
         )}

@@ -81,10 +81,37 @@ export const ReservationSection: React.FC<ReservationSectionProps> = ({
     return slots;
   }, []);
 
+  // Check if date or time is in the past
+  const isDateInPast = date < todayStr;
+  const isTimeInPast = useMemo(() => {
+    if (date < todayStr) return true;
+    if (date === todayStr) {
+      const now = new Date();
+      const [h, m] = time.split(':').map(Number);
+      const slotTime = new Date(now);
+      slotTime.setHours(h, m, 0, 0);
+      if (h < 4) {
+        slotTime.setDate(slotTime.getDate() + 1);
+      }
+      return slotTime.getTime() < now.getTime();
+    }
+    return false;
+  }, [date, time, todayStr]);
+
+  const isPastSelection = isDateInPast || isTimeInPast;
+
   // Compute table occupancy for the selected date & time
   const tableOccupancy = useMemo(() => {
+    if (isPastSelection) {
+      // Do not show tables as available for past time slots per requirement 3
+      const allBlocked: Record<string, { isOccupied: boolean; reservationId?: string; reservedBy?: string }> = {};
+      RESTAURANT_TABLES.forEach(t => {
+        allBlocked[t.id] = { isOccupied: true, reservedBy: 'Slot Expired' };
+      });
+      return allBlocked;
+    }
     return getTableOccupancy(RESTAURANT_TABLES, reservations, date, time);
-  }, [reservations, date, time]);
+  }, [reservations, date, time, isPastSelection]);
 
   // Check capacity for selected date & time
   const currentSlotBookedSeats = useMemo(() => {
@@ -93,11 +120,12 @@ export const ReservationSection: React.FC<ReservationSectionProps> = ({
       .reduce((sum, r) => sum + r.partySize, 0);
   }, [reservations, date, time]);
 
-  const seatsRemaining = Math.max(0, CONFIG.totalSeats - currentSlotBookedSeats);
-  const isSlotFull = seatsRemaining < partySize;
+  const seatsRemaining = isPastSelection ? 0 : Math.max(0, CONFIG.totalSeats - currentSlotBookedSeats);
+  const isSlotFull = isPastSelection || seatsRemaining < partySize;
 
   // Auto-pick or validate selected table
   const selectedTable = useMemo(() => {
+    if (isPastSelection) return null;
     if (selectedTableId) {
       const match = RESTAURANT_TABLES.find(t => t.id === selectedTableId);
       if (match && !tableOccupancy[match.id]?.isOccupied && match.seats >= partySize) {
@@ -106,10 +134,14 @@ export const ReservationSection: React.FC<ReservationSectionProps> = ({
     }
     // Fallback: first available table that fits party size
     return RESTAURANT_TABLES.find(t => !tableOccupancy[t.id]?.isOccupied && t.seats >= partySize) || null;
-  }, [selectedTableId, tableOccupancy, partySize]);
+  }, [selectedTableId, tableOccupancy, partySize, isPastSelection]);
 
   const handleTableClick = (table: FloorTable) => {
     soundEffects.playPop();
+    if (isPastSelection) {
+      setErrorMsg('This time slot is in the past. Please select an upcoming slot or future date.');
+      return;
+    }
     if (tableOccupancy[table.id]?.isOccupied) return;
     if (table.seats < partySize) {
       setErrorMsg(`Table ${table.id} (${table.name}) seats up to ${table.seats} guests. Please select a larger table or booth.`);
@@ -123,32 +155,22 @@ export const ReservationSection: React.FC<ReservationSectionProps> = ({
     e.preventDefault();
     setErrorMsg(null);
 
+    if (isPastSelection) {
+      setErrorMsg('Cannot book a past date or expired time slot. Please pick an upcoming time slot.');
+      return;
+    }
+
+    // Check party size against selected table's capacity
+    if (selectedTable && partySize > selectedTable.seats) {
+      setErrorMsg(`Party size of ${partySize} exceeds Table ${selectedTable.id} capacity (${selectedTable.seats} seats). Please select a larger table.`);
+      return;
+    }
+
     // Validate phone
     const phoneVal = validatePakistaniPhone(phone);
     if (!phoneVal.isValid) {
       setErrorMsg(phoneVal.error || 'Invalid Pakistani mobile number');
       return;
-    }
-
-    // Minimum 60 min notice for same day
-    const now = new Date();
-    if (date === todayStr) {
-      const [h, m] = time.split(':').map(Number);
-      const slotTime = new Date(now);
-      slotTime.setHours(h, m, 0, 0);
-      // Handle late night past midnight slots
-      if (h < 4) {
-        slotTime.setDate(slotTime.getDate() + 1);
-      }
-      const diffMinutes = (slotTime.getTime() - now.getTime()) / (1000 * 60);
-      if (diffMinutes < 0) {
-        setErrorMsg('This time slot has already passed for today. Please select an upcoming time slot or future date.');
-        return;
-      }
-      if (diffMinutes < 45 && h >= 4) {
-        setErrorMsg('Same-day reservations require advance notice. Please pick a later slot today.');
-        return;
-      }
     }
 
     // Check capacity
@@ -158,8 +180,9 @@ export const ReservationSection: React.FC<ReservationSectionProps> = ({
     }
 
     soundEffects.playCartDing();
+    const newReservationCode = generateReservationCode();
     const newReservation: TableReservation = {
-      id: generateReservationCode(),
+      id: newReservationCode,
       createdAt: new Date().toISOString(),
       customerName: name.trim(),
       customerPhone: phoneVal.normalized,
@@ -173,16 +196,9 @@ export const ReservationSection: React.FC<ReservationSectionProps> = ({
       status: 'Confirmed',
     };
 
-    try {
-      confetti({
-        particleCount: 50,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#0189FE', '#F5C45E', '#8DBCE8'],
-      });
-    } catch {}
-
     onBookReservation(newReservation);
+    soundEffects.playFanfare();
+    confetti({ particleCount: 70, spread: 80, origin: { y: 0.6 } });
     setConfirmedReservation(newReservation);
   };
 
@@ -268,42 +284,74 @@ export const ReservationSection: React.FC<ReservationSectionProps> = ({
         {tab === 'book' ? (
           <div className="boutique-card p-6 md:p-8">
             {confirmedReservation ? (
-              <div className="text-center py-8 flex flex-col items-center">
-                <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
-                  <CheckCircle2 className="w-10 h-10" />
+              <div role="status" aria-live="polite" className="text-center py-6 flex flex-col items-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-3xl shadow-inner">
+                  ✓
                 </div>
-                <h3 className="text-2xl font-black text-[#2F5E9E] dark:text-[#8DBCE8]">
-                  Table Reserved Successfully!
-                </h3>
-                <p className="text-sm text-[#1F2430]/80 dark:text-gray-300 mt-2">
-                  Your reservation code is:
-                </p>
-                <div className="text-3xl font-black tracking-widest text-[#0189FE] my-3 px-6 py-2 rounded-2xl bg-sky-50 dark:bg-slate-800 border-2 border-dashed border-[#0189FE]">
-                  {confirmedReservation.id}
+                <div className="space-y-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                    Table Reserved & Held
+                  </span>
+                  <h3 className="font-serif text-2xl font-bold text-slate-900 dark:text-white">
+                    Reservation Confirmed!
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                    We look forward to hosting you and your guests at Bunny Bites Peshawar.
+                  </p>
                 </div>
 
-                {confirmedReservation.tableName && (
-                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 text-xs font-bold mb-3 border border-amber-300">
-                    <Armchair className="w-4 h-4 text-amber-600" />
-                    <span>Assigned: Table {confirmedReservation.tableNumber} – {confirmedReservation.tableName}</span>
+                {/* Details Card */}
+                <div className="w-full max-w-md p-5 rounded-2xl bg-stone-50 dark:bg-slate-800/80 border border-stone-200 dark:border-slate-700 text-left space-y-3">
+                  <div className="flex items-center justify-between border-b border-stone-200 dark:border-slate-700 pb-2.5">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Reservation Code:</span>
+                    <span className="font-mono text-base font-bold text-[#0189FE]">
+                      {confirmedReservation.id}
+                    </span>
                   </div>
-                )}
 
-                <p className="text-xs text-gray-500 max-w-md">
-                  We have reserved your table on <strong>{confirmedReservation.date}</strong> at <strong>{confirmedReservation.time}</strong> for <strong>{confirmedReservation.partySize} guests</strong>.
-                </p>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500 dark:text-slate-400 font-medium">Guest Name:</span>
+                    <span className="font-bold text-slate-900 dark:text-white">{confirmedReservation.customerName}</span>
+                  </div>
 
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500 dark:text-slate-400 font-medium">Reserved Spot:</span>
+                    <span className="font-bold text-slate-900 dark:text-white">
+                      Table {confirmedReservation.tableNumber} – {confirmedReservation.tableName}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500 dark:text-slate-400 font-medium">Date & Time:</span>
+                    <span className="font-bold text-[#0189FE]">{confirmedReservation.date} at {confirmedReservation.time}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-500 dark:text-slate-400 font-medium">Party Size & Occasion:</span>
+                    <span className="text-slate-900 dark:text-white font-medium">
+                      {confirmedReservation.partySize} Guests · {confirmedReservation.occasion}
+                    </span>
+                  </div>
+
+                  {confirmedReservation.specialRequests && (
+                    <div className="pt-2 border-t border-stone-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300">
+                      <strong>Special Request:</strong> {confirmedReservation.specialRequests}
+                    </div>
+                  )}
+                </div>
+
+                {/* WhatsApp Staff Notification Link */}
+                <div className="w-full max-w-md space-y-2 pt-2">
                   <a
-                    href={`https://wa.me/${CONFIG.whatsapp}?text=${encodeURIComponent(
-                      `Hello Bunny Bites! I just booked a table: Code ${confirmedReservation.id} (Table #${confirmedReservation.tableNumber} - ${confirmedReservation.tableName}) for ${confirmedReservation.partySize} persons on ${confirmedReservation.date} at ${confirmedReservation.time}. Name: ${confirmedReservation.customerName}. Looking forward to the Crown Crust!`
+                    href={`https://wa.me/${CONFIG.whatsappOrders}?text=${encodeURIComponent(
+                      `🐰 *BUNNY BITES PESHAWAR - TABLE RESERVATION*\n━━━━━━━━━━━━━━━━━━━━━\n🔖 Code: ${confirmedReservation.id}\n👤 Guest: ${confirmedReservation.customerName}\n📞 Phone: ${confirmedReservation.customerPhone}\n🪑 Table: ${confirmedReservation.tableNumber} (${confirmedReservation.tableName || ''})\n📅 Date: ${confirmedReservation.date}\n⏰ Time: ${confirmedReservation.time}\n👥 Party: ${confirmedReservation.partySize} Guests\n🎉 Occasion: ${confirmedReservation.occasion}${confirmedReservation.specialRequests ? `\n📝 Notes: ${confirmedReservation.specialRequests}` : ''}`
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-6 py-3 rounded-full text-xs font-bold bg-[#25D366] hover:bg-[#1EBE5D] text-white flex items-center gap-2 shadow-md"
+                    className="w-full min-h-[44px] py-3 px-4 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-2 shadow-md transition-colors cursor-pointer"
                   >
                     <MessageCircle className="w-4 h-4" />
-                    <span>Send WhatsApp Confirmation</span>
+                    <span>Send Booking to Staff WhatsApp</span>
                   </a>
 
                   <button
@@ -314,7 +362,7 @@ export const ReservationSection: React.FC<ReservationSectionProps> = ({
                       setPhone('');
                       setSelectedTableId(null);
                     }}
-                    className="px-5 py-3 rounded-full text-xs font-bold bg-white dark:bg-slate-700 text-[#2F5E9E] dark:text-sky-300 border border-[#8DBCE8]"
+                    className="w-full min-h-[44px] px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-950 text-xs font-bold transition-colors cursor-pointer"
                   >
                     Book Another Table
                   </button>
@@ -322,8 +370,25 @@ export const ReservationSection: React.FC<ReservationSectionProps> = ({
               </div>
             ) : (
               <form onSubmit={handleBook} className="flex flex-col gap-6">
+
+                {/* Visible Error for Past Date / Time */}
+                {isPastSelection && (
+                  <div role="status" aria-live="polite" className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-200 text-xs font-bold flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+                    <span>Cannot book a past date or expired time slot. Please select today or an upcoming time slot.</span>
+                  </div>
+                )}
+
+                {/* Capacity Warning */}
+                {selectedTable && partySize > selectedTable.seats && (
+                  <div role="status" aria-live="polite" className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 text-xs font-bold flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                    <span>⚠️ Selected party size ({partySize} guests) exceeds Table {selectedTable.id} capacity ({selectedTable.seats} seats). Please choose a larger table or booth.</span>
+                  </div>
+                )}
+
                 {errorMsg && (
-                  <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 text-rose-700 dark:text-rose-200 text-xs font-bold flex items-center gap-2">
+                  <div role="status" aria-live="polite" className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 text-rose-700 dark:text-rose-200 text-xs font-bold flex items-center gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0" />
                     <span>{errorMsg}</span>
                   </div>
@@ -395,7 +460,7 @@ export const ReservationSection: React.FC<ReservationSectionProps> = ({
                         <span>Interactive Dining Floor Plan</span>
                       </h4>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        Real-time table occupancy for <strong>{date}</strong> at <strong>{time}</strong>. Hover any table for ambience details & tap to reserve.
+                        Live dining floor plan — select your table below.
                       </p>
                     </div>
 
@@ -659,7 +724,7 @@ export const ReservationSection: React.FC<ReservationSectionProps> = ({
                         </span>
                       </div>
                       <span className="font-extrabold text-[#0189FE] hidden sm:inline">
-                        Locked for Booking ✓
+                        Locked for Booking
                       </span>
                     </div>
                   )}

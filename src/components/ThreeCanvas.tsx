@@ -172,7 +172,10 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
     // RIGGED 3D BUNNY MASCOT WITH OBJECT3D PIVOTS
     // ==========================================
     const bunnyRoot = new THREE.Group();
-    bunnyRoot.position.set(isMobile ? 0.8 : 1.9, -0.4, 0.5);
+    // On mobile devices, hide the dancing mascot to avoid UI collision & distraction
+    bunnyRoot.visible = !isMobile;
+    // On desktop, position comfortably to the right margin (2.45) for spacious typography
+    bunnyRoot.position.set(isMobile ? 0 : 2.45, -0.4, 0.5);
     bunnyRoot.scale.set(0.9, 0.9, 0.9);
     scene.add(bunnyRoot);
 
@@ -576,22 +579,24 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
       rightEarPivot.rotation.z = earAngleR;
 
       // Section-based bunny posing and camera positioning
-      let targetBunnyX = isMobile ? 0.7 : 1.9;
+      let targetBunnyX = 2.45;
       let targetBunnyY = -0.4;
       let targetCamY = 1.2;
 
       if (activeSection === 'crown-crust') {
-        targetBunnyX = isMobile ? 1.4 : 2.4;
+        targetBunnyX = 2.75;
         targetBunnyY = -0.1;
       } else if (activeSection === 'menu') {
-        targetBunnyX = isMobile ? 1.5 : 2.5;
+        targetBunnyX = 2.85;
         targetBunnyY = -0.3;
       } else if (activeSection === 'our-space') {
-        targetBunnyX = isMobile ? -0.8 : -1.8;
+        targetBunnyX = 2.4;
       }
 
-      bunnyRoot.position.x = THREE.MathUtils.lerp(bunnyRoot.position.x, targetBunnyX, 0.05);
-      bunnyRoot.position.y = THREE.MathUtils.lerp(bunnyRoot.position.y, targetBunnyY, 0.05);
+      if (bunnyRoot.visible) {
+        bunnyRoot.position.x = THREE.MathUtils.lerp(bunnyRoot.position.x, targetBunnyX, 0.05);
+        bunnyRoot.position.y = THREE.MathUtils.lerp(bunnyRoot.position.y, targetBunnyY, 0.05);
+      }
       camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetCamY, 0.05);
 
       // Sparkles drift
@@ -647,12 +652,12 @@ export const ThreeCanvas: React.FC<ThreeCanvasProps> = ({
       {/* Three.js canvas container */}
       <div ref={containerRef} className="absolute inset-0 w-full h-full" />
 
-      {/* Interactive Bunny Speech Bubble Floating in 3D Screen Space */}
+      {/* Interactive Bunny Speech Bubble Floating in 3D Screen Space (Desktop Only) */}
       {speechBubbleText && (
         <div
           role="status"
           aria-live="polite"
-          className="absolute top-28 md:top-20 right-3 sm:right-6 md:right-28 pointer-events-auto max-w-[280px] sm:max-w-xs md:max-w-sm px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl bg-white/95 text-[#2F5E9E] font-bold text-xs sm:text-sm shadow-xl border-2 border-[#8DBCE8] animate-bounce transition-all z-20 backdrop-blur-md"
+          className="hidden md:block absolute top-20 right-12 md:right-28 pointer-events-auto max-w-xs md:max-w-sm px-4 py-3 rounded-2xl bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-white font-bold text-xs sm:text-sm shadow-xl border border-slate-200 dark:border-slate-700 transition-all z-20 backdrop-blur-md"
         >
           <div className="flex items-center gap-2">
             <span className="text-lg sm:text-xl">🐰</span>

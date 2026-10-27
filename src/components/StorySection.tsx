@@ -55,10 +55,10 @@ export const StorySection: React.FC = () => {
           </div>
 
           <h3 className="font-serif text-xl font-bold text-slate-900 dark:text-white">
-            Faisal Khan
+            Faisal Khan Marwat
           </h3>
           <p className="text-xs font-semibold text-stone-400 dark:text-slate-500 uppercase tracking-wider mt-0.5 font-sans-clean">
-            Founder & Master Baker
+            Founder & Master Pizzaiolo
           </p>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Bunny Bites Hayatabad Phase 1, Peshawar

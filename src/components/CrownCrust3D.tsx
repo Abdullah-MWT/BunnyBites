@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { soundEffects } from '../utils/audio';
+import { Sparkles, Layers, Info } from 'lucide-react';
 
 interface CrownCrust3DProps {
   isExploded?: boolean;
@@ -12,14 +13,43 @@ export const CrownCrust3D: React.FC<CrownCrust3DProps> = ({
   onExplodeToggle,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [activeHotspot, setActiveHotspot] = useState<string | null>(null);
+  const [activeHighlight, setActiveHighlight] = useState<number>(0);
+
+  const highlights = [
+    {
+      id: 0,
+      title: '18 Cheese Crowns',
+      badge: '👑',
+      tag: 'Hand-Pinched',
+      desc: 'Hand-crimped golden pockets stuffed with stretchy mozzarella & garlic cream dollops.',
+    },
+    {
+      id: 1,
+      title: '450°C Volcanic Deck',
+      badge: '🔥',
+      tag: 'Stone Oven',
+      desc: 'Blistered in 90 seconds on volcanic stone deck for high-hydration leopard spots.',
+    },
+    {
+      id: 2,
+      title: 'Peshawari Spiced Meat',
+      badge: '🍗',
+      tag: 'Smoked Charcoal',
+      desc: 'Tender chicken marinated in house roasted spices, black olives & bell capsicum.',
+    },
+  ];
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    const width = container.clientWidth || 400;
-    const height = container.clientHeight || 400;
+    // Clear previous children
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
+
+    const width = container.clientWidth || 360;
+    const height = container.clientHeight || 360;
 
     let renderer: THREE.WebGLRenderer;
     try {
@@ -34,12 +64,17 @@ export const CrownCrust3D: React.FC<CrownCrust3DProps> = ({
     container.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 50);
-    camera.position.set(0, 3.2, 4.2);
+
+    // Responsive Camera Fitting:
+    // If aspect < 1.2 (mobile phones & small boxes), pull camera back so the full 4.2-unit pizza fits with padding!
+    const aspect = width / height;
+    const baseDistance = aspect < 1.0 ? 5.8 / aspect : aspect < 1.3 ? 5.2 : 4.4;
+    const camera = new THREE.PerspectiveCamera(40, aspect, 0.1, 50);
+    camera.position.set(0, baseDistance * 0.72, baseDistance);
     camera.lookAt(0, 0, 0);
 
-    // Warm appetizing lighting
-    const ambLight = new THREE.AmbientLight(0xFFF7EC, 1.3);
+    // Warm Appetizing Lighting
+    const ambLight = new THREE.AmbientLight(0xFFF7EC, 1.4);
     scene.add(ambLight);
 
     const mainLight = new THREE.DirectionalLight(0xFFE8C2, 1.8);
@@ -47,15 +82,15 @@ export const CrownCrust3D: React.FC<CrownCrust3DProps> = ({
     mainLight.castShadow = true;
     scene.add(mainLight);
 
-    const goldRimLight = new THREE.PointLight(0xF5C45E, 1.6, 10);
-    goldRimLight.position.set(-2, 2, -2);
+    const goldRimLight = new THREE.PointLight(0xF5C45E, 1.5, 12);
+    goldRimLight.position.set(-2, 3, -2);
     scene.add(goldRimLight);
 
     // Root Pizza Group
     const pizzaRoot = new THREE.Group();
     scene.add(pizzaRoot);
 
-    // Pizza Materials
+    // Materials
     const crustMat = new THREE.MeshStandardMaterial({
       color: 0xE29B4A, // Golden baked dough
       roughness: 0.8,
@@ -95,18 +130,18 @@ export const CrownCrust3D: React.FC<CrownCrust3DProps> = ({
     pizzaRoot.add(toppingsLayer);
 
     // 1. Base Dough Disc
-    const baseGeo = new THREE.CylinderGeometry(1.9, 1.95, 0.1, 36);
+    const baseGeo = new THREE.CylinderGeometry(1.85, 1.9, 0.1, 36);
     const baseMesh = new THREE.Mesh(baseGeo, crustMat);
     baseMesh.position.y = 0;
     baseMesh.castShadow = true;
     baseMesh.receiveShadow = true;
     baseLayer.add(baseMesh);
 
-    // 2. Crown Crust Ring: ~18 golden crust bumps with white cheese dollops
+    // 2. Crown Crust Ring: 18 golden crust bumps with white cheese dollops
     const numBumps = 18;
-    const ringRadius = 1.82;
-    const bumpGeo = new THREE.SphereGeometry(0.25, 16, 16);
-    const dollopGeo = new THREE.ConeGeometry(0.12, 0.16, 12);
+    const ringRadius = 1.78;
+    const bumpGeo = new THREE.SphereGeometry(0.24, 16, 16);
+    const dollopGeo = new THREE.ConeGeometry(0.11, 0.15, 12);
 
     for (let i = 0; i < numBumps; i++) {
       const angle = (i / numBumps) * Math.PI * 2;
@@ -119,140 +154,107 @@ export const CrownCrust3D: React.FC<CrownCrust3DProps> = ({
       bump.position.set(bx, 0.1, bz);
       crownLayer.add(bump);
 
-      // White cheese dollop on top
+      // Garlic Cream Dollop
       const dollop = new THREE.Mesh(dollopGeo, dollopMat);
-      dollop.position.set(bx, 0.3, bz);
-      dollop.rotation.y = angle;
+      dollop.position.set(bx * 0.94, 0.28, bz * 0.94);
       crownLayer.add(dollop);
     }
 
-    // 3. Cheese & Marinara Layer
-    const cheeseDiscGeo = new THREE.CylinderGeometry(1.65, 1.68, 0.08, 36);
-    const cheeseMesh = new THREE.Mesh(cheeseDiscGeo, cheeseMat);
-    cheeseMesh.position.y = 0.08;
+    // 3. Melted Mozzarella Cheese Disc
+    const cheeseGeo = new THREE.CylinderGeometry(1.58, 1.62, 0.05, 32);
+    const cheeseMesh = new THREE.Mesh(cheeseGeo, cheeseMat);
+    cheeseMesh.position.y = 0.06;
     sauceCheeseLayer.add(cheeseMesh);
 
-    // 4. Loaded Toppings Layer: Olives, Capsicum strips, Spiced Chicken chunks
-    // Olives (dark tori)
-    const oliveGeo = new THREE.TorusGeometry(0.08, 0.038, 8, 16);
-    for (let o = 0; o < 14; o++) {
-      const r = 0.4 + Math.random() * 1.05;
+    // 4. Center Toppings
+    const oliveGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.06, 12);
+    const capsicumGeo = new THREE.BoxGeometry(0.22, 0.05, 0.1);
+    const chickenGeo = new THREE.BoxGeometry(0.25, 0.12, 0.2);
+
+    // Procedural distribution across center
+    for (let t = 0; t < 22; t++) {
+      const r = 0.2 + Math.sqrt(Math.random()) * 1.25;
       const theta = Math.random() * Math.PI * 2;
-      const olive = new THREE.Mesh(oliveGeo, oliveMat);
-      olive.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.3;
-      olive.rotation.y = Math.random() * Math.PI;
-      olive.position.set(Math.cos(theta) * r, 0.15, Math.sin(theta) * r);
-      toppingsLayer.add(olive);
+      const tx = Math.cos(theta) * r;
+      const tz = Math.sin(theta) * r;
+
+      if (t % 3 === 0) {
+        const chicken = new THREE.Mesh(chickenGeo, chickenMat);
+        chicken.position.set(tx, 0.14, tz);
+        chicken.rotation.y = Math.random() * Math.PI;
+        chicken.rotation.z = (Math.random() - 0.5) * 0.2;
+        toppingsLayer.add(chicken);
+      } else if (t % 3 === 1) {
+        const olive = new THREE.Mesh(oliveGeo, oliveMat);
+        olive.position.set(tx, 0.12, tz);
+        olive.rotation.x = Math.PI / 2;
+        toppingsLayer.add(olive);
+      } else {
+        const capsicum = new THREE.Mesh(capsicumGeo, capsicumMat);
+        capsicum.position.set(tx, 0.11, tz);
+        capsicum.rotation.y = Math.random() * Math.PI;
+        toppingsLayer.add(capsicum);
+      }
     }
 
-    // Capsicum strips
-    const capsicumGeo = new THREE.BoxGeometry(0.32, 0.045, 0.07);
-    for (let c = 0; c < 12; c++) {
-      const r = 0.35 + Math.random() * 1.1;
-      const theta = Math.random() * Math.PI * 2;
-      const cap = new THREE.Mesh(capsicumGeo, capsicumMat);
-      cap.rotation.y = Math.random() * Math.PI;
-      cap.rotation.x = (Math.random() - 0.5) * 0.2;
-      cap.position.set(Math.cos(theta) * r, 0.16, Math.sin(theta) * r);
-      toppingsLayer.add(cap);
-    }
-
-    // Chicken Chunks
-    const chickenGeo = new THREE.DodecahedronGeometry(0.11);
-    for (let k = 0; k < 15; k++) {
-      const r = 0.3 + Math.random() * 1.15;
-      const theta = Math.random() * Math.PI * 2;
-      const chick = new THREE.Mesh(chickenGeo, chickenMat);
-      chick.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
-      chick.position.set(Math.cos(theta) * r, 0.17, Math.sin(theta) * r);
-      toppingsLayer.add(chick);
-    }
-
-    // Steam particles drifting up
-    const steamGeo = new THREE.BufferGeometry();
-    const steamCount = 18;
-    const steamPos = new Float32Array(steamCount * 3);
-    for (let s = 0; s < steamCount * 3; s += 3) {
-      steamPos[s] = (Math.random() - 0.5) * 1.2;
-      steamPos[s + 1] = 0.3 + Math.random() * 1.4;
-      steamPos[s + 2] = (Math.random() - 0.5) * 1.2;
-    }
-    steamGeo.setAttribute('position', new THREE.BufferAttribute(steamPos, 3));
-    const steamMat = new THREE.PointsMaterial({
-      color: 0xFFFFFF,
-      size: 0.14,
-      transparent: true,
-      opacity: 0.35,
-    });
-    const steamParticles = new THREE.Points(steamGeo, steamMat);
-    scene.add(steamParticles);
-
-    // Interactive Drag to Spin with Inertia
+    // Interactive Drag Orbit & Auto-spin
     let isDragging = false;
     let prevMouseX = 0;
-    let spinVelocity = 0.008;
+    let autoSpin = true;
+    let rotationVelocity = 0.006;
 
     const onPointerDown = (e: MouseEvent | TouchEvent) => {
       isDragging = true;
-      prevMouseX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      autoSpin = false;
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      prevMouseX = clientX;
     };
 
     const onPointerMove = (e: MouseEvent | TouchEvent) => {
       if (!isDragging) return;
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const deltaX = clientX - prevMouseX;
-      spinVelocity = deltaX * 0.006;
-      pizzaRoot.rotation.y += spinVelocity;
       prevMouseX = clientX;
+      pizzaRoot.rotation.y += deltaX * 0.01;
     };
 
     const onPointerUp = () => {
       isDragging = false;
+      setTimeout(() => {
+        autoSpin = true;
+      }, 3500);
     };
 
     const dom = renderer.domElement;
     dom.addEventListener('mousedown', onPointerDown);
     window.addEventListener('mousemove', onPointerMove);
     window.addEventListener('mouseup', onPointerUp);
-
     dom.addEventListener('touchstart', onPointerDown, { passive: true });
     window.addEventListener('touchmove', onPointerMove, { passive: true });
     window.addEventListener('touchend', onPointerUp);
 
+    // Animation Loop
     let animId: number;
-    let clock = new THREE.Clock();
+    const clock = new THREE.Clock();
 
     const renderLoop = () => {
       animId = requestAnimationFrame(renderLoop);
       const delta = clock.getDelta();
 
-      // Inertia spin
-      if (!isDragging) {
-        pizzaRoot.rotation.y += spinVelocity;
-        spinVelocity *= 0.96;
-        if (Math.abs(spinVelocity) < 0.004) {
-          spinVelocity = 0.004; // Continuous gentle rotation
-        }
+      if (autoSpin) {
+        pizzaRoot.rotation.y += rotationVelocity;
       }
 
-      // Explode layer heights
-      const targetBaseY = isExploded ? -0.4 : 0;
-      const targetCrownY = isExploded ? 0.3 : 0;
-      const targetCheeseY = isExploded ? 0.8 : 0;
-      const targetToppingsY = isExploded ? 1.35 : 0;
+      // Smooth Layer Explosion Lerp
+      const targetBaseY = isExploded ? -0.7 : 0;
+      const targetCrownY = isExploded ? 0.35 : 0;
+      const targetCheeseY = isExploded ? 0.95 : 0;
+      const targetToppingsY = isExploded ? 1.6 : 0;
 
       baseLayer.position.y = THREE.MathUtils.lerp(baseLayer.position.y, targetBaseY, 0.08);
       crownLayer.position.y = THREE.MathUtils.lerp(crownLayer.position.y, targetCrownY, 0.08);
       sauceCheeseLayer.position.y = THREE.MathUtils.lerp(sauceCheeseLayer.position.y, targetCheeseY, 0.08);
       toppingsLayer.position.y = THREE.MathUtils.lerp(toppingsLayer.position.y, targetToppingsY, 0.08);
-
-      // Steam animation
-      const spos = steamGeo.attributes.position.array as Float32Array;
-      for (let s = 1; s < spos.length; s += 3) {
-        spos[s] += delta * 0.4;
-        if (spos[s] > 2.0) spos[s] = 0.3;
-      }
-      steamGeo.attributes.position.needsUpdate = true;
 
       renderer.render(scene, camera);
     };
@@ -263,7 +265,11 @@ export const CrownCrust3D: React.FC<CrownCrust3DProps> = ({
       if (!container) return;
       const w = container.clientWidth;
       const h = container.clientHeight;
-      camera.aspect = w / h;
+      const newAspect = w / h;
+      const newDistance = newAspect < 1.0 ? 5.8 / newAspect : newAspect < 1.3 ? 5.2 : 4.4;
+
+      camera.aspect = newAspect;
+      camera.position.set(0, newDistance * 0.72, newDistance);
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
     };
@@ -287,81 +293,75 @@ export const CrownCrust3D: React.FC<CrownCrust3DProps> = ({
   }, [isExploded]);
 
   return (
-    <div className="relative w-full h-[360px] md:h-[450px] flex items-center justify-center select-none">
-      {/* 3D Canvas */}
-      <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
+    <div className="w-full flex flex-col items-center select-none">
+      {/* 3D Canvas Container with Clean Aspect Ratio and No Clumsy Box Overflow */}
+      <div className="relative w-full h-[320px] sm:h-[380px] md:h-[430px] rounded-2xl overflow-hidden bg-gradient-to-b from-stone-50/50 to-stone-100/30 dark:from-slate-900/40 dark:to-slate-950/40 border border-slate-200/60 dark:border-slate-800/80">
+        <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing" />
 
-      {/* Explode Layers Interactive Button */}
-      <div className="absolute top-3 right-3 z-10 flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            soundEffects.playPop();
-            if (onExplodeToggle) onExplodeToggle();
-          }}
-          className="px-4 py-2 rounded-full font-bold text-xs tracking-wide bg-white/90 hover:bg-[#648BC3] hover:text-white text-[#2F5E9E] border border-[#8DBCE8] shadow-md transition-all flex items-center gap-1.5 backdrop-blur-sm"
-        >
-          <span>{isExploded ? 'Recombine Crust' : 'Explode 5 Layers'}</span>
-          <span className="text-base">{isExploded ? '✨' : '💥'}</span>
-        </button>
-      </div>
-
-      {/* Ingredient Hotspots floating around */}
-      <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-4">
-        {/* Hotspot 1: Crown Bumps */}
-        <div className="flex justify-start">
-          <div
-            onMouseEnter={() => setActiveHotspot('crown')}
-            onMouseLeave={() => setActiveHotspot(null)}
-            className="pointer-events-auto group relative cursor-pointer"
+        {/* Explode / Recombine Control Button */}
+        <div className="absolute top-3 right-3 z-10">
+          <button
+            type="button"
+            onClick={() => {
+              soundEffects.playPop();
+              if (onExplodeToggle) onExplodeToggle();
+            }}
+            className="min-h-[44px] px-3.5 sm:px-4 py-2 rounded-xl font-bold text-xs bg-white/95 dark:bg-slate-800/95 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 shadow-md transition-all flex items-center gap-1.5 backdrop-blur-md cursor-pointer hover:border-[#0189FE]"
           >
-            <div className="w-8 h-8 rounded-full bg-[#F5C45E] text-[#1F2430] font-black text-xs flex items-center justify-center shadow-lg border-2 border-white ring-2 ring-[#F5C45E]/40 animate-pulse">
-              1
-            </div>
-            <div className={`absolute left-10 top-0 w-52 p-3 rounded-xl bg-white/95 text-[#2F5E9E] shadow-xl text-xs font-semibold border border-[#8DBCE8] backdrop-blur-md transition-opacity duration-200 ${activeHotspot === 'crown' ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
-              <strong className="block text-sm text-[#0189FE] mb-1">👑 18 Cheese Crowns</strong>
-              Hand-pinched dough pockets filled with stringy mozzarella & a dollop of rich white garlic cream.
-            </div>
-          </div>
+            <Layers className="w-4 h-4 text-[#0189FE]" />
+            <span>{isExploded ? 'Recombine Crust' : 'Explode 5 Layers'}</span>
+          </button>
         </div>
 
-        {/* Hotspot 2: Spiced Grilled Chicken */}
-        <div className="flex justify-end">
-          <div
-            onMouseEnter={() => setActiveHotspot('chicken')}
-            onMouseLeave={() => setActiveHotspot(null)}
-            className="pointer-events-auto group relative cursor-pointer"
-          >
-            <div className="w-8 h-8 rounded-full bg-[#0189FE] text-white font-black text-xs flex items-center justify-center shadow-lg border-2 border-white ring-2 ring-[#0189FE]/40 animate-pulse">
-              2
-            </div>
-            <div className={`absolute right-10 top-0 w-52 p-3 rounded-xl bg-white/95 text-[#2F5E9E] shadow-xl text-xs font-semibold border border-[#8DBCE8] backdrop-blur-md transition-opacity duration-200 ${activeHotspot === 'chicken' ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
-              <strong className="block text-sm text-[#0189FE] mb-1">🍗 Spiced Chicken Chunks</strong>
-              Marinated in local Peshawari charcoal spices, grilled juicy and placed generously across the center.
-            </div>
-          </div>
-        </div>
-
-        {/* Hotspot 3: Stone Oven Baked */}
-        <div className="flex justify-center">
-          <div
-            onMouseEnter={() => setActiveHotspot('dough')}
-            onMouseLeave={() => setActiveHotspot(null)}
-            className="pointer-events-auto group relative cursor-pointer"
-          >
-            <div className="w-8 h-8 rounded-full bg-[#2F5E9E] text-white font-black text-xs flex items-center justify-center shadow-lg border-2 border-white ring-2 ring-[#2F5E9E]/40 animate-pulse">
-              3
-            </div>
-            <div className={`absolute bottom-10 -left-20 w-52 p-3 rounded-xl bg-white/95 text-[#2F5E9E] shadow-xl text-xs font-semibold border border-[#8DBCE8] backdrop-blur-md transition-opacity duration-200 ${activeHotspot === 'dough' ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}>
-              <strong className="block text-sm text-[#0189FE] mb-1">🔥 450° Stone Oven Crust</strong>
-              Slow-fermented for 24 hours to achieve an ultra-crisp exterior and fluffy pillow interior.
-            </div>
-          </div>
+        {/* Clean Spin Instruction Footer */}
+        <div className="absolute bottom-2.5 inset-x-0 flex justify-center pointer-events-none">
+          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-white/80 dark:bg-slate-900/80 px-3 py-1 rounded-full border border-slate-200/60 dark:border-slate-800/60 backdrop-blur-xs">
+            Drag to rotate 360° · Scroll to zoom
+          </span>
         </div>
       </div>
 
-      <div className="absolute bottom-2 left-4 text-[11px] text-[#2F5E9E]/70 font-bold bg-white/70 px-2.5 py-1 rounded-full backdrop-blur-xs">
-        🖱️ Drag to spin 360° | Hover numbered badges for secrets
+      {/* Touch-Friendly Ingredient Highlight Tabs (Replaces overlapping popups on mobile!) */}
+      <div className="w-full mt-4 space-y-2.5">
+        <div className="grid grid-cols-3 gap-2">
+          {highlights.map(h => {
+            const isSelected = activeHighlight === h.id;
+            return (
+              <button
+                key={h.id}
+                type="button"
+                onClick={() => {
+                  soundEffects.playPop();
+                  setActiveHighlight(h.id);
+                }}
+                className={`min-h-[44px] p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
+                  isSelected
+                    ? 'border-[#0189FE] bg-sky-50 dark:bg-blue-950/40 text-slate-900 dark:text-white shadow-xs'
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                }`}
+              >
+                <span className="text-base leading-none mb-1">{h.badge}</span>
+                <span className="text-[11px] font-bold truncate max-w-full">{h.title}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Selected Highlight Detail Card */}
+        <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-850/60 border border-slate-200 dark:border-slate-800 text-xs flex items-start gap-2.5">
+          <Info className="w-4 h-4 text-[#0189FE] shrink-0 mt-0.5" />
+          <div>
+            <div className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <span>{highlights[activeHighlight].title}</span>
+              <span className="text-[10px] px-2 py-0.2 rounded-md bg-[#0189FE]/10 text-[#0189FE] dark:text-sky-300 font-bold uppercase tracking-wider">
+                {highlights[activeHighlight].tag}
+              </span>
+            </div>
+            <p className="text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+              {highlights[activeHighlight].desc}
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

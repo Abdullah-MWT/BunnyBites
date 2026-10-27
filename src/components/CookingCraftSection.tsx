@@ -277,12 +277,12 @@ export const CookingCraftSection: React.FC = () => {
             {/* Quote Card (Clean Hairline Border, Zero Left Accent Strip) */}
             <div className="p-5 sm:p-6 rounded-2xl bg-stone-50 dark:bg-slate-800/50 border border-stone-200/80 dark:border-slate-700/80 space-y-2">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 flex items-center justify-center font-bold text-xs">
-                  FK
+                <div className="w-8 h-8 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 flex items-center justify-center font-bold text-xs tracking-wider">
+                  FKM
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-slate-900 dark:text-white">
-                    Faisal Khan
+                    Faisal Khan Marwat
                   </h4>
                   <p className="text-[11px] text-stone-500 dark:text-slate-400">Founder & Executive Pizzaiolo</p>
                 </div>

@@ -8,6 +8,7 @@ export const CONFIG: AppConfig = {
   fullAddress: 'Bunny Bites, Pirpal Plaza, Bilal Market, Phase 1, Hayatabad, Peshawar, Pakistan',
   phone: '+92 300 1234567',
   whatsapp: '923001234567',
+  whatsappOrders: '923001234567',
   openingHoursDisplay: 'Open Daily: 12:00 PM – 03:00 AM (Late Night Craving Spot!)',
   openHour: 12, // 12:00 PM
   closeHour: 3,  // 03:00 AM next day
@@ -30,7 +31,8 @@ export const CONFIG: AppConfig = {
     facebook: 'https://facebook.com/bunnybitespeshawar',
     instagram: 'https://instagram.com/bunnybites.pk',
   },
-  ownerStory: `Born from a love for whimsical dining and mouthwatering comfort food, Bunny Bites was founded in Peshawar by passionate local foodies. Inspired by the blue-and-white dreamscapes of Santorini and the warm joy of family feasts, we created a haven where fluffy clouds, warm gold LED lighting, and our mischievous Bunny mascot meet real artisan culinary craft. Our viral Crown Crust pizzas—hand-pinched cheese crowns with dollops of garlic-cream and loaded toppings—are made fresh every single day until 3:00 AM.`,
+  ownerName: 'Faisal Khan Marwat',
+  ownerStory: `Founded by master food craftsman Faisal Khan Marwat in Peshawar, Bunny Bites was born from a passionate vision: pairing authentic Greek Santorini aesthetics with artisanal stone-deck baking. Faisal brought together high-hydration 24-hour fermented dough, eighteen hand-pinched mozzarella crowns, and warm Peshawari hospitality to create Hayatabad's favorite comfort dining destination, open every night until 3:00 AM.`,
 };
 
 export const INITIAL_MENU: MenuItem[] = [

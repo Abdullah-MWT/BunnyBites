@@ -142,7 +142,7 @@ export const CrownCrustSection: React.FC<CrownCrustSectionProps> = ({
                       key={addon.name}
                       type="button"
                       onClick={() => toggleAddOn(addon)}
-                      className={`w-full p-2.5 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                      className={`w-full min-h-[44px] p-2.5 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
                         isChecked
                           ? 'border-slate-900 dark:border-white bg-stone-50 dark:bg-slate-800'
                           : 'border-stone-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300'
@@ -184,7 +184,7 @@ export const CrownCrustSection: React.FC<CrownCrustSectionProps> = ({
             <button
               type="button"
               onClick={handleAdd}
-              className="px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-950 dark:hover:bg-stone-100 font-semibold text-xs tracking-wide flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
+              className="min-h-[44px] px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:text-slate-950 dark:hover:bg-stone-100 font-semibold text-xs tracking-wide flex items-center gap-2 transition-colors cursor-pointer shadow-xs"
             >
               {isAddedRecently ? (
                 <>

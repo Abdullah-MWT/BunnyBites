@@ -1,8 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Send, X, Volume2, Sparkles, MessageSquare, Bot } from 'lucide-react';
+import {
+  Mic,
+  Send,
+  X,
+  Sparkles,
+  Bot,
+  AlertCircle,
+  Square,
+  Globe2,
+} from 'lucide-react';
 import { MenuItem } from '../types';
-import { CONFIG } from '../config';
-import { isRestaurantOpen } from '../utils/rules';
 import { soundEffects } from '../utils/audio';
 
 interface VoiceConciergeProps {
@@ -19,23 +26,39 @@ interface ChatMessage {
   text: string;
 }
 
+type AssistantStatus = 'idle' | 'listening' | 'processing' | 'unavailable';
+type LanguageMode = 'roman' | 'ur' | 'en';
+
 export const VoiceConcierge: React.FC<VoiceConciergeProps> = ({
-  menuItems,
-  onVoiceAddItem,
+  menuItems: _menuItems,
+  onVoiceAddItem: _onVoiceAddItem,
   onVoiceOpenCart,
   onVoiceScrollTo,
   onSpeakingChange,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [language, setLanguage] = useState<LanguageMode>('roman');
+  const [sessionActive, setSessionActive] = useState(false);
+  const [status, setStatus] = useState<AssistantStatus>('idle');
   const [typedInput, setTypedInput] = useState('');
-  const [hasSpeechRecognition, setHasSpeechRecognition] = useState(true);
+  const [micError, setMicError] = useState<string | null>(null);
+
+  const getGreeting = (lang: LanguageMode) => {
+    switch (lang) {
+      case 'ur':
+        return 'السلام علیکم! میں آپ کا بنی وائس دربان ہوں۔ کراؤن کرسٹ، 24 گھنٹے خمیر شدہ ڈو، یا ٹیبل بکنگ کے بارے میں کچھ بھی پوچھیے۔';
+      case 'roman':
+        return 'Assalam-o-Alaikum! Main aapka Bunny Voice Concierge hoon. Hamare 18-crown crust pizza, artisan dough, ya table booking ke baare mein poochein!';
+      default:
+        return 'Hello! I am your Bunny Voice Concierge. Ask about our 18-crown crust pizzas, artisan dough, or family combos!';
+    }
+  };
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 'init',
       sender: 'bunny',
-      text: "Hi, thanks for visiting Bunny Bites Peshawar, this is Bunny! Would you like to order our signature Crown Crust, book a table, or hear what's popular?",
+      text: getGreeting('roman'),
     },
   ]);
 
@@ -46,13 +69,123 @@ export const VoiceConcierge: React.FC<VoiceConciergeProps> = ({
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Speech Recognition Setup
-  useEffect(() => {
+  // Update greeting when language changes if only initial message exists
+  const handleLanguageChange = (newLang: LanguageMode) => {
+    setLanguage(newLang);
+    soundEffects.playPop();
+    setMessages(prev => {
+      if (prev.length <= 1) {
+        return [{ id: `init-${Date.now()}`, sender: 'bunny', text: getGreeting(newLang) }];
+      }
+      return [
+        ...prev,
+        {
+          id: `lang-${Date.now()}`,
+          sender: 'bunny',
+          text:
+            newLang === 'ur'
+              ? 'زبان اردو منتخب ہو گئی۔ اب آپ اردو میں بول یا لکھ سکتے ہیں!'
+              : newLang === 'roman'
+              ? 'Language Roman Urdu set. Ab aap Roman Urdu mein bol ya type kar sakte hain!'
+              : 'Language switched to English. You can now speak or type in English!',
+        },
+      ];
+    });
+  };
+
+  // Cheerful SpeechSynthesis helper with Urdu & Hindi phonetic voice support
+  const speakText = (text: string) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      setStatus('idle');
+      return;
+    }
+
+    try {
+      window.speechSynthesis.cancel();
+      // Remove unprintable control characters without removing Urdu Unicode letters
+      const cleanText = text.replace(/[\u0000-\u001F\u007F-\u009F]/g, '').trim();
+      if (!cleanText) {
+        setStatus('idle');
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.rate = 1.0;
+      utterance.pitch = 1.15;
+
+      const voices = window.speechSynthesis.getVoices();
+      if (language === 'ur') {
+        const urVoice = voices.find(
+          v => v.lang.startsWith('ur') || v.lang.startsWith('hi') || v.lang.includes('PK')
+        );
+        if (urVoice) utterance.voice = urVoice;
+        utterance.lang = 'ur-PK';
+      } else if (language === 'roman') {
+        const pakVoice = voices.find(
+          v => v.lang.includes('PK') || v.lang.includes('IN') || v.lang.startsWith('hi')
+        );
+        if (pakVoice) utterance.voice = pakVoice;
+      }
+
+      utterance.onstart = () => {
+        onSpeakingChange(true);
+      };
+
+      utterance.onend = () => {
+        onSpeakingChange(false);
+        setStatus('idle');
+      };
+
+      utterance.onerror = () => {
+        onSpeakingChange(false);
+        setStatus('idle');
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      onSpeakingChange(false);
+      setStatus('idle');
+    }
+  };
+
+  const stopSession = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        recognitionRef.current.stop();
+      } catch {}
+      recognitionRef.current = null;
+    }
+
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+
+    onSpeakingChange(false);
+    setSessionActive(false);
+    setStatus('idle');
+  };
+
+  const startSession = () => {
+    if (sessionActive || status === 'listening') return;
+
+    soundEffects.playPop();
+    setMicError(null);
+
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-      setHasSpeechRecognition(false);
+      setStatus('unavailable');
+      setMicError(
+        language === 'ur'
+          ? 'اس براؤزر پر آواز کی شناخت کی سہولت دستیاب نہیں ہے۔ براہ کرم نیچے لکھ کر پوچھیں۔'
+          : language === 'roman'
+          ? 'Browser speech recognition support nahi karta. Aap neechay text type kar saktay hain.'
+          : 'Speech recognition is unsupported on this browser. You can type your questions below.'
+      );
       return;
     }
 
@@ -60,7 +193,13 @@ export const VoiceConcierge: React.FC<VoiceConciergeProps> = ({
       const rec = new SpeechRecognition();
       rec.continuous = false;
       rec.interimResults = false;
-      rec.lang = 'en-US';
+      // Set Urdu for both Urdu and Roman Urdu speech recognition
+      rec.lang = language === 'en' ? 'en-US' : 'ur-PK';
+
+      rec.onstart = () => {
+        setSessionActive(true);
+        setStatus('listening');
+      };
 
       rec.onresult = (e: any) => {
         const transcript = e.results[0][0].transcript;
@@ -69,130 +208,107 @@ export const VoiceConcierge: React.FC<VoiceConciergeProps> = ({
         }
       };
 
-      rec.onend = () => {
-        setIsListening(false);
+      rec.onerror = (event: any) => {
+        console.warn('Speech recognition error:', event.error);
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          setMicError(
+            language === 'ur'
+              ? 'مائیکروفون کی اجازت نہیں ملی۔ نیچے ٹائپ کر کے سوال پوچھیں۔'
+              : 'Microphone permission was denied. Please allow mic access or type below.'
+          );
+        } else {
+          setMicError(`Voice input error (${event.error || 'error'}). Please type below.`);
+        }
+        stopSession();
       };
 
-      rec.onerror = () => {
-        setIsListening(false);
+      rec.onend = () => {
+        setStatus(prev => (prev === 'listening' ? 'idle' : prev));
+        setSessionActive(false);
       };
 
       recognitionRef.current = rec;
+      rec.start();
     } catch {
-      setHasSpeechRecognition(false);
-    }
-  }, []);
-
-  // Cheerful SpeechSynthesis helper
-  const speakText = (text: string) => {
-    if (typeof window === 'undefined' || !window.speechSynthesis) return;
-
-    window.speechSynthesis.cancel();
-    const cleanText = text.replace(/[^\w\s.,?!'-]/gi, '');
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.rate = 1.05;
-    utterance.pitch = 1.25; // Friendly, cheerful bunny pitch
-
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-      onSpeakingChange(true);
-    };
-
-    utterance.onend = () => {
-      setIsSpeaking(false);
-      onSpeakingChange(false);
-    };
-
-    utterance.onerror = () => {
-      setIsSpeaking(false);
-      onSpeakingChange(false);
-    };
-
-    window.speechSynthesis.speak(utterance);
-  };
-
-  const toggleListening = () => {
-    soundEffects.playPop();
-    if (!recognitionRef.current) return;
-
-    if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    } else {
-      try {
-        recognitionRef.current.start();
-        setIsListening(true);
-      } catch (err) {
-        console.warn('Speech recognition start failed:', err);
-      }
+      setStatus('unavailable');
+      setMicError('Microphone access could not be initialized. Please type your question.');
+      stopSession();
     }
   };
 
-  // NLU query matcher and action executor
   const handleUserQuery = async (query: string) => {
+    setStatus('processing');
     const userMsg: ChatMessage = { id: `u-${Date.now()}`, sender: 'user', text: query };
     setMessages(prev => [...prev, userMsg]);
 
     const q = query.toLowerCase();
     let reply = '';
 
-    // 1. Check popularity / recommendations
-    if (q.includes('popular') || q.includes('recommend') || q.includes('bestseller') || q.includes('favorite')) {
+    // Quick direct navigation triggers
+    if (
+      q.includes('crown') ||
+      q.includes('crust') ||
+      q.includes('کراؤن') ||
+      q.includes('کرسٹ') ||
+      q.includes('پنیر')
+    ) {
       reply =
-        'Our top star is the Signature Crown Crust Pizza with 18 mozzarella crowns and white garlic dollops! The Big Bunny Crunch Burger and Honey Glazed Wings are also super popular!';
+        language === 'ur'
+          ? 'ہمارا دستخطی بنی کراؤن کرسٹ پیزا 18 ہاتھ سے بنے موزریلا بمپس کے ساتھ آتا ہے۔ میں آپ کو کراؤن کرسٹ سیکشن پر لے جا رہا ہوں!'
+          : language === 'roman'
+          ? 'Hamara signature Bunny Crown Crust pizza 18 hand-crimped mozzarella cheese bumps ke sath aata hai. Main aapko Crown Crust section par le ja raha hoon!'
+          : 'Our signature is the Bunny Crown Crust pizza with 18 hand-crimped mozzarella cheese pockets! Taking you right there.';
       onVoiceScrollTo('signature-crown');
-    }
-    // 2. Add to cart commands
-    else if (q.includes('add') || q.includes('order') || q.includes('want')) {
-      if (q.includes('crown') || q.includes('pizza')) {
-        const pizza = menuItems.find(i => i.id === 'pizza-crown-signature') || menuItems[0];
-        onVoiceAddItem(pizza, 1);
-        reply = 'I added 1 Signature Bunny Crown Crust Pizza to your feast cart! Anything to drink with that?';
-      } else if (q.includes('chicken') || q.includes('crispy')) {
-        const item = menuItems.find(i => i.category.includes('Chicken')) || menuItems[1];
-        onVoiceAddItem(item, 1);
-        reply = 'Added 1 Golden Bunny Crispy Chicken to your cart! Fresh and extra crunchy!';
-      } else if (q.includes('burger')) {
-        const burger = menuItems.find(i => i.category.includes('Burger')) || menuItems[2];
-        onVoiceAddItem(burger, 1);
-        reply = 'Added 1 Big Bunny Crunch Burger to your cart! You have great taste!';
-      } else if (q.includes('wing')) {
-        const wings = menuItems.find(i => i.id === 'wings-honey-glazed') || menuItems[3];
-        onVoiceAddItem(wings, 1);
-        reply = 'Added Sweet Honey Garlic Glazed Wings to your cart!';
-      } else if (q.includes('drink') || q.includes('pepsi') || q.includes('cooler')) {
-        const drink = menuItems.find(i => i.category.includes('Drink')) || menuItems[menuItems.length - 1];
-        onVoiceAddItem(drink, 1);
-        reply = 'Added a refreshing chilled drink to your cart!';
-      } else {
-        reply = 'I can help you add our Crown Crust pizza, crispy chicken, wings, or burgers. Which one would you love?';
-      }
-    }
-    // 3. Cart commands
-    else if (q.includes('cart') || q.includes('checkout') || q.includes('total')) {
-      onVoiceOpenCart();
-      reply = 'Opening your feast cart right now! You can check your total and enter your delivery address.';
-    }
-    // 4. Hours and status
-    else if (q.includes('hour') || q.includes('open') || q.includes('close') || q.includes('time')) {
-      const openStatus = isRestaurantOpen();
-      reply = `We are open daily from 12:00 PM until 03:00 AM in Hayatabad! Right now we are ${openStatus.message}.`;
-    }
-    // 5. Reservation commands
-    else if (q.includes('table') || q.includes('reserve') || q.includes('book')) {
+    } else if (
+      q.includes('menu') ||
+      q.includes('food') ||
+      q.includes('burger') ||
+      q.includes('chicken') ||
+      q.includes('مینو') ||
+      q.includes('کھانا') ||
+      q.includes('پیزا')
+    ) {
+      reply =
+        language === 'ur'
+          ? 'میں نے مینو کھول دیا ہے! پتھر کے اوون میں پکے پیزا، خیبر کرسپی چکن، اور فیملی ڈیلز حاضر ہیں۔'
+          : language === 'roman'
+          ? 'Maine menu open kar diya hai! Stone-baked pizzas, crispy fried chicken, aur family deals check karein.'
+          : 'I opened our menu for you! We have stone-baked Crown Crust pizzas, crispy chicken, and family feast deals.';
+      onVoiceScrollTo('menu');
+    } else if (
+      q.includes('reserve') ||
+      q.includes('table') ||
+      q.includes('book') ||
+      q.includes('jagah') ||
+      q.includes('ریزرو') ||
+      q.includes('ٹیبل') ||
+      q.includes('نشست')
+    ) {
+      reply =
+        language === 'ur'
+          ? 'آپ کو براہ راست فلور پلان اور ٹیبل بکنگ انجن پر لے جایا جا رہا ہے!'
+          : language === 'roman'
+          ? 'Aapko seedha floor plan aur table reservation engine par le ja raha hoon!'
+          : 'Taking you right to the table reservation engine and floor plan view!';
       onVoiceScrollTo('reservations');
-      reply = 'Scrolling down to our Santorini Table Reservation section! You can select your date, time, and party size.';
-    }
-    // 6. Location / Address
-    else if (q.includes('where') || q.includes('location') || q.includes('address')) {
-      reply = 'We are located at Pirpal Plaza, Bilal Market, Phase 1, Hayatabad, Peshawar! We also deliver all across Hayatabad.';
-      onVoiceScrollTo('visit-us');
-    }
-    // 7. Small talk & jokes
-    else if (q.includes('joke') || q.includes('pun')) {
-      reply = 'Why did the bunny take a slice of Crown Crust? Because it was ear-resistibly cheesy!';
+    } else if (
+      q.includes('cart') ||
+      q.includes('bag') ||
+      q.includes('order') ||
+      q.includes('mangwana') ||
+      q.includes('کارٹ') ||
+      q.includes('آرڈر') ||
+      q.includes('تھَیلا')
+    ) {
+      reply =
+        language === 'ur'
+          ? 'آپ کا آرڈر بیگ کھول دیا گیا ہے!'
+          : language === 'roman'
+          ? 'Aapka order bag open kar diya hai!'
+          : 'Opening your order bag now!';
+      onVoiceOpenCart();
     } else {
-      // Query Faisal Khan via server-side Gemini API
+      // Connect to Gemini 3.8 Flash Ask Chef endpoint for intelligent trilingual culinary replies!
       try {
         const res = await fetch('/api/ai/ask-chef', {
           method: 'POST',
@@ -201,12 +317,17 @@ export const VoiceConcierge: React.FC<VoiceConciergeProps> = ({
         });
         if (res.ok) {
           const data = await res.json();
-          reply = data.answer || 'Welcome to Bunny Bites Hayatabad! How can I delight your tastebuds tonight?';
+          reply = data.answer;
         } else {
-          reply = 'Welcome to Bunny Bites Hayatabad! You can order our signature Crown Crust pizza, crispy chicken, or reserve a table.';
+          throw new Error('Fallback');
         }
       } catch {
-        reply = 'Welcome to Bunny Bites Hayatabad! You can order our signature Crown Crust pizza, crispy chicken, or reserve a table.';
+        reply =
+          language === 'ur'
+            ? 'السلام علیکم! حیات آباد فیز 1 میں ہمارا کراؤن کرسٹ پیزا، 24 گھنٹے خمیر شدہ ڈو اور خیبر مصالحہ چکن ہر روز رات 3 بجے تک تازہ ملتا ہے۔'
+            : language === 'roman'
+            ? 'Assalam-o-Alaikum! Hayatabad Phase 1 mein hamara Crown Crust pizza aur crispy chicken rozana raat 3:00 AM tak fresh ready hota hai.'
+            : 'Welcome to Bunny Bites Hayatabad! Ask about our Crown Crust, 24h fermented dough, or reserve a table.';
       }
     }
 
@@ -218,117 +339,262 @@ export const VoiceConcierge: React.FC<VoiceConciergeProps> = ({
   const handleTypedSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!typedInput.trim()) return;
-    const text = typedInput.trim();
+    const query = typedInput.trim();
     setTypedInput('');
-    handleUserQuery(text);
+    handleUserQuery(query);
   };
+
+  useEffect(() => {
+    return () => {
+      stopSession();
+    };
+  }, []);
+
+  const quickPrompts = {
+    ur: ['کراؤن کرسٹ دکھاؤ', 'ٹیبل بک کرو', 'مینو کھولو', 'ڈو کی خاصیت؟'],
+    roman: ['Crown Crust dikhao', 'Table book karo', 'Menu kholo', 'Dough recipe?'],
+    en: ['Show Crown Crust', 'Book a Table', 'Open Menu', 'Special Dough?'],
+  }[language];
 
   return (
     <>
-      {/* Floating Mic Button Trigger */}
-      <div className="fixed bottom-6 right-6 z-40">
+      {/* Floating Widget Launcher Button */}
+      <div className="fixed bottom-6 right-4 sm:right-6 z-40">
         <button
           type="button"
           onClick={() => {
             soundEffects.playPop();
             setIsOpen(!isOpen);
           }}
-          aria-label="Open Bunny Voice & Chat Assistant"
-          className="relative p-4 rounded-full bg-gradient-to-r from-[#0189FE] to-[#2F5E9E] hover:from-[#2F5E9E] hover:to-[#0189FE] text-white shadow-2xl flex items-center justify-center transform hover:scale-110 active:scale-95 transition-all cursor-pointer ring-4 ring-white/80 dark:ring-slate-800"
+          aria-label={isOpen ? 'Close Bunny Voice Concierge' : 'Open Bunny Voice Concierge'}
+          className="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-2xl flex items-center justify-center transition-transform hover:scale-105 active:scale-95 cursor-pointer relative border border-slate-700/50"
         >
-          {isSpeaking && (
+          {sessionActive && (
             <span className="absolute -top-1 -right-1 flex h-4 w-4">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-500"></span>
             </span>
           )}
           <Bot className="w-6 h-6" />
         </button>
       </div>
 
-      {/* Voice & Typed Chat Modal Popover */}
+      {/* Voice Concierge Drawer / Modal */}
       {isOpen && (
-        <div className="fixed bottom-24 right-4 sm:right-6 z-50 w-[92vw] sm:w-96 rounded-3xl bg-white/95 dark:bg-[#1A2536]/95 border-2 border-[#8DBCE8] shadow-2xl backdrop-blur-xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Bunny Voice Concierge"
+          className="fixed bottom-22 right-4 sm:right-6 z-50 w-[92vw] sm:w-96 rounded-3xl bg-white dark:bg-[#131B2A] border border-slate-200 dark:border-slate-800 shadow-2xl backdrop-blur-xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4"
+        >
           {/* Header */}
-          <div className="p-4 bg-gradient-to-r from-[#2F5E9E] to-[#648BC3] text-white flex items-center justify-between">
+          <div className="p-3.5 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full bg-white text-2xl flex items-center justify-center shadow-sm">
+              <div className="w-9 h-9 rounded-xl bg-white text-slate-900 text-xl flex items-center justify-center font-bold">
                 🐰
               </div>
               <div>
-                <h4 className="font-extrabold text-sm leading-tight">Bunny Voice Concierge</h4>
-                <span className="text-[10px] text-sky-100 flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  Ready to assist in Peshawar
-                </span>
+                <h4 className="font-bold text-sm leading-tight text-white flex items-center gap-1.5">
+                  Bunny Voice Concierge
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold border border-emerald-500/30">
+                    اردو + EN
+                  </span>
+                </h4>
+                <div className="flex items-center gap-1.5 text-[10px] text-slate-300 mt-0.5">
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      status === 'listening'
+                        ? 'bg-rose-500 animate-pulse'
+                        : status === 'processing'
+                        ? 'bg-amber-400 animate-spin'
+                        : status === 'unavailable'
+                        ? 'bg-slate-400'
+                        : 'bg-emerald-400'
+                    }`}
+                  />
+                  <span className="capitalize">
+                    Status:{' '}
+                    {status === 'listening'
+                      ? 'Listening in Urdu / English...'
+                      : status === 'processing'
+                      ? 'Thinking...'
+                      : status}
+                  </span>
+                </div>
               </div>
             </div>
 
             <button
               type="button"
               onClick={() => {
-                window.speechSynthesis?.cancel();
-                setIsSpeaking(false);
-                onSpeakingChange(false);
+                stopSession();
                 setIsOpen(false);
               }}
-              className="p-1 rounded-full hover:bg-white/20 text-white"
+              aria-label="Close concierge"
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          {/* Transcript / Conversation History */}
-          <div className="flex-1 max-h-72 overflow-y-auto p-4 space-y-3 text-xs">
-            {messages.map(m => (
-              <div
-                key={m.id}
-                className={`flex ${m.sender === 'bunny' ? 'justify-start' : 'justify-end'}`}
+          {/* Language Selector Bar */}
+          <div className="px-3 py-2 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 flex items-center gap-1">
+              <Globe2 className="w-3.5 h-3.5 text-[#0189FE]" />
+              <span>Language / زبان:</span>
+            </span>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                onClick={() => handleLanguageChange('roman')}
+                className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                  language === 'roman'
+                    ? 'bg-[#0189FE] text-white shadow-xs'
+                    : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
               >
+                Roman Urdu
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLanguageChange('ur')}
+                className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                  language === 'ur'
+                    ? 'bg-[#0189FE] text-white shadow-xs'
+                    : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                اردو
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLanguageChange('en')}
+                className={`px-2 py-0.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${
+                  language === 'en'
+                    ? 'bg-[#0189FE] text-white shadow-xs'
+                    : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                English
+              </button>
+            </div>
+          </div>
+
+          {/* Helpful Concierge Guide */}
+          <div className="px-3 py-1.5 bg-sky-50 dark:bg-slate-800/50 border-b border-sky-100 dark:border-slate-800 text-sky-800 dark:text-sky-200 text-[11px] leading-snug flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-[#0189FE] shrink-0" />
+            <span className="truncate">
+              {language === 'ur'
+                ? 'کراؤن کرسٹ، ڈو ریسیپی، یا ٹیبل بکنگ کے بارے میں پوچھیے!'
+                : language === 'roman'
+                ? 'Crown Crust, dough recipe, ya table booking ke baare mein poochein!'
+                : 'Ask about Crown Crust pizza, add items to bag, or book a table!'}
+            </span>
+          </div>
+
+          {/* Transcript / Conversation History */}
+          <div className="flex-1 max-h-56 overflow-y-auto p-3 space-y-2.5 text-xs">
+            {messages.map(m => {
+              const isUrduScript = /[\u0600-\u06FF]/.test(m.text);
+              return (
                 <div
-                  className={`max-w-[82%] px-3.5 py-2.5 rounded-2xl ${
-                    m.sender === 'bunny'
-                      ? 'bg-sky-50 dark:bg-slate-800 text-[#2F5E9E] dark:text-sky-200 border border-[#8DBCE8]/30'
-                      : 'bg-[#0189FE] text-white shadow-xs font-semibold'
-                  }`}
+                  key={m.id}
+                  className={`flex ${m.sender === 'bunny' ? 'justify-start' : 'justify-end'}`}
                 >
-                  {m.text}
+                  <div
+                    dir={isUrduScript ? 'rtl' : 'ltr'}
+                    className={`max-w-[88%] px-3.5 py-2 rounded-2xl leading-relaxed ${
+                      m.sender === 'bunny'
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700'
+                        : 'bg-[#0189FE] text-white font-medium shadow-xs'
+                    }`}
+                  >
+                    {m.text}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div ref={chatEndRef} />
           </div>
 
-          {/* Interactive Speech & Typed Input Bar */}
-          <div className="p-3 border-t border-[#8DBCE8]/30 bg-white/70 dark:bg-slate-900/60">
-            {hasSpeechRecognition && (
-              <div className="flex justify-center mb-2">
+          {/* Quick Prompts */}
+          <div className="px-3 py-1.5 bg-slate-50/50 dark:bg-slate-900/40 border-t border-slate-100 dark:border-slate-800/80 flex flex-wrap gap-1">
+            {quickPrompts.map((prompt, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleUserQuery(prompt)}
+                className="text-[10px] px-2 py-0.5 rounded-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-[#0189FE] hover:text-[#0189FE] transition-colors cursor-pointer"
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+
+          {/* Mic Error Notice */}
+          {micError && (
+            <div className="mx-3 my-1.5 p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 text-rose-700 dark:text-rose-200 text-[11px] flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{micError}</span>
+            </div>
+          )}
+
+          {/* Controls Bar */}
+          <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-2">
+            <div className="flex gap-2">
+              {!sessionActive ? (
                 <button
                   type="button"
-                  onClick={toggleListening}
-                  className={`px-4 py-2 rounded-full text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-xs ${
-                    isListening
-                      ? 'bg-rose-500 text-white animate-pulse'
-                      : 'bg-sky-100 dark:bg-slate-800 text-[#2F5E9E] dark:text-sky-300 hover:bg-sky-200'
-                  }`}
+                  onClick={startSession}
+                  className="flex-1 min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold bg-[#0189FE] hover:bg-blue-600 text-white flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
                 >
-                  {isListening ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
-                  <span>{isListening ? 'Listening to your voice...' : 'Tap Mic to Speak'}</span>
+                  <Mic className="w-4 h-4" />
+                  <span>
+                    {language === 'ur'
+                      ? 'اردو میں بولیں (Start Mic)'
+                      : language === 'roman'
+                      ? 'Boliye (Start Mic)'
+                      : 'Speak Now (Start Mic)'}
+                  </span>
                 </button>
-              </div>
-            )}
+              ) : (
+                <button
+                  type="button"
+                  onClick={stopSession}
+                  className="flex-1 min-h-[44px] px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+                >
+                  <Square className="w-3.5 h-3.5 fill-current" />
+                  <span>
+                    {language === 'ur'
+                      ? 'آواز روکیں (Stop)'
+                      : language === 'roman'
+                      ? 'Aawaz Rokein (Stop)'
+                      : 'Stop Session'}
+                  </span>
+                </button>
+              )}
+            </div>
 
+            {/* Fallback Typed Input */}
             <form onSubmit={handleTypedSubmit} className="flex items-center gap-2">
               <input
                 type="text"
                 value={typedInput}
                 onChange={e => setTypedInput(e.target.value)}
-                placeholder="Ask 'What is popular?' or 'Add crown pizza'..."
-                className="flex-1 px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-2 focus:ring-[#0189FE]"
+                placeholder={
+                  language === 'ur'
+                    ? 'اردو یا رومن میں ٹائپ کریں...'
+                    : language === 'roman'
+                    ? 'Type in Roman Urdu or English...'
+                    : 'Type a question in Urdu or English...'
+                }
+                dir={language === 'ur' ? 'rtl' : 'ltr'}
+                className="flex-1 min-h-[44px] px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs focus:ring-2 focus:ring-[#0189FE] outline-hidden text-slate-900 dark:text-white"
               />
               <button
                 type="submit"
-                className="p-2 rounded-xl bg-[#0189FE] hover:bg-[#2F5E9E] text-white transition-colors cursor-pointer"
+                aria-label="Send query"
+                className="w-11 h-11 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:text-slate-950 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
               >
                 <Send className="w-4 h-4" />
               </button>

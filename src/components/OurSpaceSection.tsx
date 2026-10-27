@@ -1,141 +1,198 @@
 import React, { useState } from 'react';
-import { Eye, MapPin, Sparkles } from 'lucide-react';
+import { Sparkles, MapPin, Armchair, Sun, Eye, ChevronRight } from 'lucide-react';
 import { soundEffects } from '../utils/audio';
 
 export const OurSpaceSection: React.FC = () => {
-  const [activeHotspot, setActiveHotspot] = useState<string | null>(null);
+  const [selectedFeature, setSelectedFeature] = useState<number>(0);
 
-  const hotspots = [
+  const spaceFeatures = [
     {
-      id: 'arches',
+      id: 0,
       title: 'Periwinkle Santorini Arches',
-      desc: 'Inspired by the cliffside doorways of Oia, finished in calming Greek periwinkle with soft ambient perimeter illumination.',
-      x: '24%',
-      y: '35%',
+      subtitle: 'Acoustic Doorways & Soft Perimeter Glow',
+      icon: '🏛️',
+      color: 'bg-blue-500/10 text-[#0189FE]',
+      description:
+        'Inspired by the whitewashed cliffside architecture of Oia, our dining rooms are framed with soft Greek periwinkle archways. Concealed warm 3000K LED strips wash down the textured acoustic plaster, creating a calm, intimate sanctuary away from the bustling streets of Hayatabad.',
+      details: [
+        { label: 'Palette', value: 'Santorini Periwinkle & Aegean Blue' },
+        { label: 'Lighting', value: '3000K Soft Architectural Halo' },
+        { label: 'Vibe', value: 'Intimate, Peaceful & Family-Friendly' },
+      ],
     },
     {
-      id: 'bunny-wall',
-      title: 'Sculptural Bunny Feature',
-      desc: 'Our white architectural mascot emblem peeking through sculpted cloud wall cutouts.',
-      x: '50%',
-      y: '26%',
+      id: 1,
+      title: '3D Bunny Mascot Wall Feature',
+      subtitle: 'Sculptural Emblem & Floating Cloud Panels',
+      icon: '🐰',
+      color: 'bg-sky-500/10 text-sky-500',
+      description:
+        'The centerpiece of our main hall: a handcrafted 3D white bunny mascot sculpture with soft pink inner ears, emerging cheerfully from scalloped cloud wall cutouts. Loved by children and family diners alike as Peshawar’s most photographed restaurant wall.',
+      details: [
+        { label: 'Artisan', value: 'Hand-sculpted matte ceramic finish' },
+        { label: 'Backdrop', value: 'Wave cloud contour panels' },
+        { label: 'Highlight', value: 'Peshawar’s signature photo spot' },
+      ],
     },
     {
-      id: 'blue-roses',
-      title: 'Blue Floral & Brass Halo Chandelier',
-      desc: 'Cascading floral installations of Santorini blue roses woven into brushed brass ring lamps.',
-      x: '75%',
-      y: '32%',
+      id: 2,
+      title: 'Blue Rose & Brass Halo Chandeliers',
+      subtitle: 'Suspended Florals & Warm Ring Lamps',
+      icon: '✨',
+      color: 'bg-amber-500/10 text-amber-500',
+      description:
+        'Suspended above the center tables are brushed brass ring chandeliers intertwined with cascading Santorini blue silk roses. The lighting casts a gentle, flattering glow on every hand-pinched crown pizza served to your table.',
+      details: [
+        { label: 'Fixtures', value: 'Brushed Brass Ring Halo Chandeliers' },
+        { label: 'Florals', value: 'Cascading Santorini Blue Silk Roses' },
+        { label: 'Atmosphere', value: 'Warm celebratory evening dining' },
+      ],
     },
     {
-      id: 'blue-booths',
-      title: 'Velvet Cloud Dining Booths',
-      desc: 'Deep plush periwinkle seating with curved ergonomic backrests for intimate family feasts.',
-      x: '50%',
-      y: '78%',
+      id: 3,
+      title: 'Velvet Cloud Family Booths',
+      subtitle: 'Deep-Plush Seating for Feasts up to 12',
+      icon: '🛋️',
+      color: 'bg-indigo-500/10 text-indigo-500',
+      description:
+        'Custom built with high-density ergonomic foam and upholstered in royal periwinkle velvet. Designed specifically for extended family dinners and birthday celebrations, keeping sound insulated and conversation private.',
+      details: [
+        { label: 'Capacity', value: 'Booths for 4, 6, and combined 12' },
+        { label: 'Comfort', value: 'Deep velvet cushions & high acoustic back' },
+        { label: 'Experience', value: '90-minute relaxed leisurely stay' },
+      ],
     },
   ];
 
+  const current = spaceFeatures[selectedFeature];
+
   return (
-    <section id="our-space" className="py-20 px-4 sm:px-8 max-w-7xl mx-auto relative">
-      <div className="max-w-2xl mb-12">
-        <div className="text-xs font-semibold tracking-wider text-stone-400 dark:text-slate-500 uppercase font-sans-clean mb-2">
-          Interior Architecture
+    <section id="our-space" className="py-16 sm:py-20 px-4 sm:px-8 max-w-7xl mx-auto relative">
+      {/* Editorial Header */}
+      <div className="max-w-2xl mb-10 sm:mb-12">
+        <div className="text-xs font-semibold tracking-wider text-slate-400 dark:text-slate-500 uppercase font-sans-clean mb-2">
+          Interior Architecture & Atmosphere
         </div>
         <h2 className="font-serif text-3xl sm:text-5xl font-bold text-slate-900 dark:text-white tracking-tight">
           The Santorini Space
         </h2>
         <p className="mt-3 text-sm sm:text-base text-slate-600 dark:text-slate-400 leading-relaxed">
-          Whitewashed organic curves, Greek periwinkle arches, and warm brass glow create Peshawar’s most tranquil dining sanctuary.
+          Whitewashed organic curves, Greek periwinkle arches, and warm brass glow create Peshawar’s most tranquil dining sanctuary in Hayatabad Phase 1.
         </p>
       </div>
 
-      {/* Interactive Room Canvas */}
-      <div className="relative w-full h-[400px] md:h-[480px] rounded-2xl overflow-hidden border border-stone-200 dark:border-slate-800 shadow-sm bg-stone-100 dark:bg-slate-900">
-        {/* Architectural Arch Silhouette */}
-        <div className="absolute inset-0 flex items-center justify-around pointer-events-none opacity-80">
-          {/* Left Arch */}
-          <div className="w-40 md:w-52 h-76 rounded-t-full border border-sky-300 dark:border-sky-800 bg-white/40 dark:bg-slate-850/40 relative overflow-hidden">
-            <div className="absolute inset-x-4 top-16 flex flex-col gap-2 opacity-40">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-1 bg-sky-400 rounded-full" />
-              ))}
-            </div>
-          </div>
-
-          {/* Center Main Arch */}
-          <div className="w-60 md:w-80 h-92 rounded-t-full border border-sky-400 dark:border-sky-700 bg-white/80 dark:bg-slate-800/80 shadow-md relative flex flex-col items-center justify-center p-6 text-center">
-            <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-900 border border-sky-200 dark:border-slate-700 flex items-center justify-center mb-3 shadow-xs">
-              <span className="font-serif text-xl font-bold text-slate-900 dark:text-white">BB</span>
-            </div>
-            <div className="font-serif text-lg font-bold text-slate-900 dark:text-white">
-              Bunny Bites Sanctuary
-            </div>
-            <p className="text-[11px] text-stone-500 dark:text-slate-400 mt-1 uppercase tracking-wider font-sans-clean">
-              Phase 1 · Hayatabad, Peshawar
-            </p>
-          </div>
-
-          {/* Right Arch */}
-          <div className="w-40 md:w-52 h-76 rounded-t-full border border-sky-300 dark:border-sky-800 bg-white/40 dark:bg-slate-850/40 relative overflow-hidden">
-            <div className="absolute inset-x-4 top-16 flex flex-col gap-2 opacity-40">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="h-1 bg-sky-400 rounded-full" />
-              ))}
-            </div>
+      {/* Main Interactive Space Showcase Card */}
+      <div className="boutique-card overflow-hidden">
+        {/* Navigation Selector Tabs (Horizontally Scrollable without Clipping on Mobile) */}
+        <div className="p-2 sm:p-3 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+            {spaceFeatures.map((feat, idx) => {
+              const isSelected = idx === selectedFeature;
+              return (
+                <button
+                  key={feat.id}
+                  type="button"
+                  onClick={() => {
+                    soundEffects.playPop();
+                    setSelectedFeature(idx);
+                  }}
+                  className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-2 ${
+                    isSelected
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-950 shadow-sm'
+                      : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700'
+                  }`}
+                >
+                  <span className="text-sm">{feat.icon}</span>
+                  <span>{feat.title}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Halo Brass Ring Accents */}
-        <div className="absolute top-8 left-1/4 w-24 h-6 rounded-full border border-amber-400/80 pointer-events-none" />
-        <div className="absolute top-8 right-1/4 w-24 h-6 rounded-full border border-amber-400/80 pointer-events-none" />
+        {/* Content Showcase Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-10 p-6 sm:p-10 items-center">
+          {/* Left: Atmospheric Architectural Visual Frame */}
+          <div className="lg:col-span-6 flex flex-col items-center justify-center">
+            <div className="relative w-full aspect-4/3 sm:aspect-16/10 rounded-2xl overflow-hidden bg-gradient-to-br from-sky-100 via-blue-50 to-indigo-100 dark:from-slate-850 dark:via-slate-900 dark:to-slate-950 border border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center p-6 text-center shadow-inner">
+              {/* Architectural Arches Backdrop */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-40 dark:opacity-20">
+                <div className="w-56 h-72 rounded-t-full border-4 border-dashed border-[#0189FE]" />
+              </div>
 
-        {/* Bottom Dining Row */}
-        <div className="absolute inset-x-0 bottom-0 py-3.5 bg-slate-900/90 text-white flex items-center justify-center text-xs border-t border-slate-800">
-          <div className="flex items-center gap-6 text-slate-300 font-sans-clean">
-            <span>Velvet Cloud Family Booths</span>
-            <span>·</span>
-            <span>Hanging Santorini Blue Roses</span>
-            <span>·</span>
-            <span>Warm 3000K Architectural Lighting</span>
+              {/* Center Decorative Emblem */}
+              <div className="relative z-10 w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-white/90 dark:bg-slate-800/90 shadow-xl border border-sky-200 dark:border-slate-700 flex items-center justify-center text-4xl sm:text-5xl mb-4 backdrop-blur-md">
+                {current.icon}
+              </div>
+
+              <div className="relative z-10">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#0189FE] block mb-1">
+                  Hayatabad Sanctuary
+                </span>
+                <h3 className="font-serif text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">
+                  {current.title}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm">
+                  {current.subtitle}
+                </p>
+              </div>
+
+              {/* Bottom pill tag */}
+              <div className="absolute bottom-3 inset-x-0 flex justify-center">
+                <span className="text-[10px] font-bold px-3 py-1 rounded-full bg-white/80 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60 backdrop-blur-xs">
+                  📍 Pirpal Plaza, Phase 1 Hayatabad, Peshawar
+                </span>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Interactive Hotspots */}
-        {hotspots.map(spot => {
-          const isActive = activeHotspot === spot.id;
-          return (
-            <div
-              key={spot.id}
-              style={{ left: spot.x, top: spot.y }}
-              className="absolute -translate-x-1/2 -translate-y-1/2 z-20"
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  soundEffects.playPop();
-                  setActiveHotspot(isActive ? null : spot.id);
-                }}
-                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-md transition-all cursor-pointer ${
-                  isActive
-                    ? 'bg-slate-900 text-white scale-110'
-                    : 'bg-white text-slate-800 hover:scale-105 border border-stone-200'
-                }`}
-                aria-label={`Explore ${spot.title}`}
-              >
-                <Sparkles className="w-3.5 h-3.5 text-[#0189FE]" />
-              </button>
+          {/* Right: Narrative & Design Specification */}
+          <div className="lg:col-span-6 space-y-6">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-sans-clean">
+                  Design Element 0{current.id + 1}
+                </span>
+              </div>
 
-              {/* Popover */}
-              {isActive && (
-                <div className="absolute bottom-10 -left-28 w-60 p-4 rounded-xl bg-white dark:bg-[#131B2A] text-slate-900 dark:text-white shadow-xl border border-stone-200 dark:border-slate-800 text-xs backdrop-blur-md z-30 animate-in fade-in zoom-in-95">
-                  <h4 className="font-serif font-bold text-slate-900 dark:text-white mb-1">{spot.title}</h4>
-                  <p className="text-slate-500 dark:text-slate-400 leading-relaxed">{spot.desc}</p>
+              <h3 className="font-serif text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
+                {current.title}
+              </h3>
+              <p className="text-xs font-semibold text-[#0189FE] mt-1">
+                {current.subtitle}
+              </p>
+
+              <p className="mt-4 text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed font-normal">
+                {current.description}
+              </p>
+            </div>
+
+            {/* Design Specifications Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+              {current.details.map((item, i) => (
+                <div
+                  key={i}
+                  className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-850/60 border border-slate-200/80 dark:border-slate-800"
+                >
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">
+                    {item.label}
+                  </span>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-white leading-snug">
+                    {item.value}
+                  </p>
                 </div>
-              )}
+              ))}
             </div>
-          );
-        })}
+
+            {/* Quote on Design by Faisal Khan Marwat */}
+            <div className="p-4 rounded-xl bg-sky-50/50 dark:bg-slate-800/40 border border-sky-100 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300 italic font-serif">
+              “Every arch, curve, and warm light was sketched to make our guests in Peshawar feel as if they stepped straight onto a Greek island terrace.”
+              <span className="block not-italic font-sans font-bold text-slate-900 dark:text-white text-[11px] mt-1">
+                — Faisal Khan Marwat, Founder
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );

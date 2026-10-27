@@ -44,8 +44,13 @@ import { VoiceConcierge } from './components/VoiceConcierge';
 import { AdminPanel } from './components/AdminPanel';
 import { CookingCraftSection } from './components/CookingCraftSection';
 import { AIChefModal } from './components/AIChefModal';
+import { QRCodeMenuModal } from './components/QRCodeMenuModal';
+import { LoyaltyTrackerModal } from './components/LoyaltyTrackerModal';
+import { Footer } from './components/Footer';
+import { AnnouncementBar } from './components/AnnouncementBar';
 
 import confetti from 'canvas-confetti';
+import { AlertCircle } from 'lucide-react';
 
 export default function App() {
   // App Theme & Sound Settings
@@ -72,6 +77,8 @@ export default function App() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isAIChefOpen, setIsAIChefOpen] = useState(false);
+  const [isQRMenuOpen, setIsQRMenuOpen] = useState(false);
+  const [isLoyaltyOpen, setIsLoyaltyOpen] = useState(false);
   const [trackingOrderId, setTrackingOrderId] = useState<string>('');
   const [activeSection, setActiveSection] = useState<string>('hero');
 
@@ -79,12 +86,14 @@ export default function App() {
   const [isVoiceSpeaking, setIsVoiceSpeaking] = useState(false);
   const [bunnyActionTrigger, setBunnyActionTrigger] = useState<string | null>(null);
 
-  // Sync Night Theme class to body
+  // Sync Night Theme class to body and documentElement (Tailwind dark mode support)
   useEffect(() => {
     if (nightTheme) {
       document.body.classList.add('night-theme');
+      document.documentElement.classList.add('dark');
     } else {
       document.body.classList.remove('night-theme');
+      document.documentElement.classList.remove('dark');
     }
     store.setItem(STORAGE_KEYS.THEME_NIGHT, nightTheme);
   }, [nightTheme]);
@@ -273,7 +282,18 @@ export default function App() {
   const totalCartCount = cart.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
-    <div className="relative min-h-screen flex flex-col font-sans selection:bg-[#8DBCE8] selection:text-[#2F5E9E]">
+    <div className="relative min-h-screen flex flex-col font-sans selection:bg-[#8DBCE8] selection:text-[#2F5E9E] bg-[#FAF8F5] dark:bg-[#080D17] text-slate-900 dark:text-slate-100 transition-colors">
+      {/* 0a. Accessible Skip Link */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:px-4 focus:py-2 focus:bg-slate-900 focus:text-white focus:rounded-xl focus:shadow-xl focus:outline-hidden text-xs font-semibold"
+      >
+        Skip to main content
+      </a>
+
+      {/* 0b. Redesigned Boutique Announcement Bar (Mobile Optimized & Interactive) */}
+      <AnnouncementBar onOrderClick={() => handleScrollTo('signature-crown')} />
+
       {/* 1. Procedural 3D WebGL Background Canvas with Rigged Bunny Mascot */}
       <ThreeCanvas
         isVoiceSpeaking={isVoiceSpeaking}
@@ -298,6 +318,8 @@ export default function App() {
         onToggleNight={() => setNightTheme(!nightTheme)}
         onScrollTo={handleScrollTo}
         onOpenAIChef={() => setIsAIChefOpen(true)}
+        onOpenQRMenu={() => setIsQRMenuOpen(true)}
+        onOpenLoyalty={() => setIsLoyaltyOpen(true)}
         onBunnyEasterEgg={() => {
           soundEffects.playFanfare();
           confetti({ particleCount: 60, spread: 70, origin: { y: 0.5 } });
@@ -306,7 +328,7 @@ export default function App() {
       />
 
       {/* Main Page Content (Overlaid on top of 3D Scene) */}
-      <main className="relative z-10 flex-1">
+      <main id="main-content" className="relative z-10 flex-1">
         {/* 3. Hero Section */}
         <Hero
           onOrderClick={() => handleScrollTo('signature-crown')}
@@ -314,6 +336,8 @@ export default function App() {
           onClocheLift={() => setBunnyActionTrigger('cloche_lift')}
           onOpenAIChef={() => setIsAIChefOpen(true)}
           onCraftClick={() => handleScrollTo('cooking-craft')}
+          onOpenQRMenu={() => setIsQRMenuOpen(true)}
+          onOpenLoyalty={() => setIsLoyaltyOpen(true)}
         />
 
         {/* 4. Signature Crown Crust 3D Exploder Section */}
@@ -356,11 +380,18 @@ export default function App() {
         />
 
         {/* 11. Live Order Tracker */}
-        <OrderTrackerSection initialOrderId={trackingOrderId} />
+        <OrderTrackerSection initialOrderId={trackingOrderId} orders={orders} />
 
         {/* 12. FAQ, Contact & Visit Us in Hayatabad */}
         <FAQContactSection />
       </main>
+
+      {/* Semantic Boutique Footer */}
+      <Footer
+        onScrollTo={handleScrollTo}
+        onOpenQRMenu={() => setIsQRMenuOpen(true)}
+        onOpenLoyalty={() => setIsLoyaltyOpen(true)}
+      />
 
       {/* 13. Slide-out Glass Cart Drawer */}
       <CartDrawer
@@ -419,6 +450,22 @@ export default function App() {
         onClose={() => setIsAIChefOpen(false)}
         menuItems={menuItems}
         onAddMultipleToCart={handleAddMultipleToCart}
+      />
+
+      {/* 17. Dine-In Table QR Code Menu Modal */}
+      <QRCodeMenuModal
+        isOpen={isQRMenuOpen}
+        onClose={() => setIsQRMenuOpen(false)}
+        onSelectCategory={() => {
+          setIsQRMenuOpen(false);
+          handleScrollTo('menu');
+        }}
+      />
+
+      {/* 18. Bunny Points Guest Loyalty Tracker Modal */}
+      <LoyaltyTrackerModal
+        isOpen={isLoyaltyOpen}
+        onClose={() => setIsLoyaltyOpen(false)}
       />
     </div>
   );
